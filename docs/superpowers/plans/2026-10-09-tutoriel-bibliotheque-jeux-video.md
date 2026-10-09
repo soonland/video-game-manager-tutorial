@@ -18,11 +18,11 @@
 - Plateformes : `PC`, `PlayStation`, `Xbox`, `Switch`.
 - **Aucune version n'est présumée ni fixée** : chaque outil et chaque dépendance s'installe dans sa version la plus récente (`@latest`, ou sans numéro de version). On ne fixe une version que pour résoudre un vrai conflit de dépendances, et le commit correspondant l'explique.
 - Le projet est créé avec **`npm create vite@latest`** dans le dépôt, comme au début du tutoriel, avec le modèle React en JavaScript. Les fichiers générés (ESLint compris) sont conservés, sauf ce que le nettoyage de la vidéo 1 supprime.
-- CSS écrit à la main, sobre, **sans bibliothèque de composants**. Une seule feuille : `src/index.css` (celle du modèle, dont on remplace le contenu).
+- Vidéos 1 à 7 : CSS écrit à la main, sobre, **sans bibliothèque de composants**, dans une seule feuille : `src/index.css` (celle du modèle, dont on remplace le contenu). Vidéo 8 : Tailwind (dernière version) remplace ce CSS, toujours sans bibliothèque de composants.
 - Interface, messages d'erreur, noms de fonctions et commentaires en **français**.
 - Les composants React ne font qu'appeler les fonctions de `src/jeux.js` (et, à partir de la vidéo 5, de `src/api.js`) ; la logique métier n'est jamais dans les composants.
 - Historique **linéaire** sur `main`, **un commit par étape** de la vidéo, puis un commit de transition au message exact `Fin de la vidéo N : <sujet>`.
-- Branches, une par fin de vidéo : `01-mise-en-place`, `02-crud`, `03-recherche-filtres`, `04-tests-unitaires`, `05-api-sqlite`, `06-cypress`, puis `07-consoles` (identique à `main`).
+- Branches, une par fin de vidéo : `01-mise-en-place`, `02-crud`, `03-recherche-filtres`, `04-tests-unitaires`, `05-api-sqlite`, `06-cypress`, `07-consoles`, puis `08-tailwind` (identique à `main`).
 - La recherche et les filtres restent **côté client** en vidéo 5 : le front récupère toute la liste.
 - Cypress travaille sur une **base de test séparée**, remise à zéro avant chaque test par une route réservée au mode test.
 - Les éléments ciblés par Cypress utilisent des attributs `data-cy` (introduits en vidéo 6).
@@ -3929,7 +3929,7 @@ git commit -m "Vidéo 7 : met à jour le README (7 vidéos, changement de schém
 git commit --allow-empty -m "Fin de la vidéo 7 : consoles et relations 1-N"
 git branch 07-consoles
 ```
-Expected: `git log --oneline -1` affiche `Fin de la vidéo 7 : consoles et relations 1-N` ; `git rev-parse main 07-consoles` donne deux fois le même identifiant ; `06-cypress` n'a pas bougé.
+Expected: `git log --oneline -1` affiche `Fin de la vidéo 7 : consoles et relations 1-N` ; `git rev-parse main 07-consoles` donne deux fois le même identifiant (avant la tâche 9 ; après, c'est `08-tailwind` qui est identique à `main`) ; `06-cypress` n'a pas bougé.
 
 - [ ] **Étape 27 : Vérification finale**
 
@@ -3938,6 +3938,578 @@ Expected: tout passe (`Tests  12 passed (12)`).
 
 Run: `git log --oneline --grep='^Fin de la vidéo'`
 Expected: sept lignes, de `Fin de la vidéo 7 : consoles et relations 1-N` à `Fin de la vidéo 1 : mise en place`.
+
+Run: `git log --oneline --merges | wc -l` puis `git status --short | wc -l`
+Expected: `0` et `0`.
+
+Clone neuf :
+```bash
+rm -rf /tmp/verif-jeux-video
+git clone -q . /tmp/verif-jeux-video
+cd /tmp/verif-jeux-video
+npm ci
+npm test
+npm run build
+cd -
+rm -rf /tmp/verif-jeux-video
+```
+Expected: l'installation réussit, `Tests  12 passed (12)`, le build se termine sans erreur.
+
+---
+
+## Tâche 9 : Vidéo 8, Habillage avec Tailwind
+
+Le dépôt existe jusqu'à la vidéo 7 (`main` = `07-consoles`). Cette tâche **ajoute des commits à la suite** ; les branches `01-…` à `07-…` ne bougent pas.
+
+**But :** habiller toute l'application avec Tailwind **sans changer son comportement**. Preuve : les 12 tests Vitest et les 30 tests Cypress passent **sans aucune modification**.
+
+**Thème (un seul, sombre) :** fond de page `slate-950` ; cartes, formulaires et page des consoles `slate-900` avec bordure `slate-700` ; texte `slate-100`, secondaire `slate-400` ; accent (boutons principaux, lien actif) `violet-500` ; danger `rose-500` ; avertissement `amber-300`.
+
+**Convention :** un bloc de code précédé d'une ligne `` `chemin` (remplacer tout le fichier) : `` ou `` `chemin` (nouveau fichier) : `` est le contenu **complet** du fichier.
+
+**Contraintes pour que les tests restent intacts :**
+- La structure du HTML, les textes et tous les attributs `data-cy` ne changent pas.
+- Les `<select>` restent des `<select>` natifs.
+- Les liens de navigation gardent une `className` **de type chaîne** : `NavLink` y ajoute lui-même la classe `active` (si on passait une fonction, elle serait remplacée). Le style du lien actif s'appuie sur l'attribut `aria-current="page"`.
+- Aucun fichier de `cypress/` ni aucun `*.test.js` n'est modifié.
+
+**Fichiers :**
+- Modifier : `package.json`, `vite.config.js`, `index.html`, `src/index.css`, `README.md`, spec et plan
+- Créer : `src/classes.js`, `src/components/Bouton.jsx`
+- Modifier : `src/App.jsx`, `src/components/CarteJeu.jsx`, `src/components/ListeJeux.jsx`, `src/components/FormulaireJeu.jsx`, `src/components/BarreFiltres.jsx`, `src/components/PageConsoles.jsx`
+
+**Interfaces :**
+- Consomme : l'application et les tests de la tâche 8 (`main`).
+- Produit :
+  - `src/classes.js` : `CHAMP` (classes des champs de saisie et des listes déroulantes) et `CARTE` (classes des cartes et panneaux), deux chaînes exportées.
+  - `Bouton({ variante = 'principal', type = 'button', className = '', ...props })` dans `src/components/Bouton.jsx` : rend un `<button>` ; `variante` vaut `'principal'`, `'secondaire'` ou `'danger'` ; toutes les autres props (dont `data-cy`, `onClick`, `type`) sont transmises au `<button>`.
+
+- [ ] **Étape 1 : Commit des documents**
+
+```bash
+git add docs
+git commit -m "Documents : ajoute la vidéo 8 (habillage avec Tailwind) à la spec et au plan"
+```
+
+- [ ] **Étape 2 : Installer Tailwind (dernières versions)**
+
+Run: `npm install tailwindcss @tailwindcss/vite`
+Expected: `tailwindcss` et `@tailwindcss/vite` apparaissent dans `dependencies`.
+
+Dans `vite.config.js` : ajouter l'import
+```js
+import tailwindcss from '@tailwindcss/vite'
+```
+avec les autres imports, et remplacer `plugins: [react()],` par :
+```js
+  plugins: [react(), tailwindcss()],
+```
+
+`src/index.css` (remplacer tout le fichier) :
+```css
+@import "tailwindcss";
+```
+
+Dans `index.html`, remplacer la balise `<html lang="fr">` par :
+```html
+<html lang="fr" class="[color-scheme:dark]">
+```
+(le navigateur affiche alors les listes déroulantes natives en sombre) et la balise `<body>` par :
+```html
+<body class="min-h-screen bg-slate-950 text-slate-100 antialiased">
+```
+
+Run: `npm run build`
+Expected: se termine sans erreur.
+
+- [ ] **Étape 3 : Commit de l'installation**
+
+```bash
+git add package.json package-lock.json vite.config.js index.html src/index.css
+git commit -m "Vidéo 8 : installe Tailwind et supprime le CSS écrit à la main"
+```
+(À ce stade l'application est volontairement « nue » : Tailwind remet à zéro les styles du navigateur. C'est le point de départ de la vidéo.)
+
+- [ ] **Étape 4 : Classes partagées et composant `Bouton`**
+
+`src/classes.js` (nouveau fichier) :
+```js
+// Classes Tailwind partagées par plusieurs composants.
+
+export const CHAMP =
+  'w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100 placeholder:text-slate-500 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 focus:outline-none disabled:opacity-50'
+
+export const CARTE = 'rounded-lg border border-slate-700 bg-slate-900 p-4'
+```
+
+`src/components/Bouton.jsx` (nouveau fichier) :
+```jsx
+// Les classes sont écrites en entier : Tailwind ne détecte pas un nom construit par morceaux.
+const VARIANTES = {
+  principal: 'border-violet-500 bg-violet-500 text-white hover:bg-violet-400',
+  secondaire: 'border-violet-500 bg-transparent text-violet-300 hover:bg-violet-500/10',
+  danger: 'border-rose-500 bg-transparent text-rose-400 hover:bg-rose-500/10',
+}
+
+function Bouton({ variante = 'principal', type = 'button', className = '', ...props }) {
+  return (
+    <button
+      type={type}
+      className={`cursor-pointer rounded-md border px-3.5 py-2 font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${VARIANTES[variante]} ${className}`}
+      {...props}
+    />
+  )
+}
+
+export default Bouton
+```
+
+```bash
+git add src/classes.js src/components/Bouton.jsx
+git commit -m "Vidéo 8 : ajoute le composant Bouton et les classes partagées"
+```
+
+- [ ] **Étape 5 : Habiller les composants**
+
+`src/components/CarteJeu.jsx` (remplacer tout le fichier) :
+```jsx
+import { CARTE } from '../classes.js'
+import Bouton from './Bouton.jsx'
+
+function CarteJeu({ jeu, onModifier, onSupprimer }) {
+  return (
+    <li className={CARTE} data-cy="carte-jeu">
+      <h2 className="text-lg font-semibold">{jeu.titre}</h2>
+      <p className="text-slate-400">
+        {jeu.console} · {jeu.statut}
+      </p>
+      {jeu.note !== null && <p className="text-slate-400">Note : {jeu.note}/5</p>}
+      <div className="mt-3 flex gap-2">
+        <Bouton variante="secondaire" data-cy="modifier" onClick={() => onModifier(jeu)}>
+          Modifier
+        </Bouton>
+        <Bouton variante="danger" data-cy="supprimer" onClick={() => onSupprimer(jeu.id)}>
+          Supprimer
+        </Bouton>
+      </div>
+    </li>
+  )
+}
+
+export default CarteJeu
+```
+
+`src/components/ListeJeux.jsx` (remplacer tout le fichier) :
+```jsx
+import CarteJeu from './CarteJeu.jsx'
+
+function ListeJeux({ jeux, onModifier, onSupprimer }) {
+  if (jeux.length === 0) {
+    return (
+      <p className="text-slate-400" data-cy="aucun-jeu">
+        Aucun jeu à afficher.
+      </p>
+    )
+  }
+
+  return (
+    <ul className="grid gap-3">
+      {jeux.map((jeu) => (
+        <CarteJeu key={jeu.id} jeu={jeu} onModifier={onModifier} onSupprimer={onSupprimer} />
+      ))}
+    </ul>
+  )
+}
+
+export default ListeJeux
+```
+
+`src/components/FormulaireJeu.jsx` (remplacer tout le fichier) :
+```jsx
+import { useState } from 'react'
+import { CARTE, CHAMP } from '../classes.js'
+import { STATUTS } from '../jeux.js'
+import Bouton from './Bouton.jsx'
+
+const VIDE = { titre: '', console_id: '', statut: STATUTS[0], note: '' }
+
+function FormulaireJeu({ jeuInitial, consoles, onSoumettre, onAnnuler }) {
+  const [valeurs, setValeurs] = useState(
+    jeuInitial ? { ...jeuInitial, note: jeuInitial.note ?? '' } : VIDE,
+  )
+
+  function changer(evenement) {
+    const { name, value } = evenement.target
+    setValeurs({ ...valeurs, [name]: value })
+  }
+
+  function soumettre(evenement) {
+    evenement.preventDefault()
+    const titre = valeurs.titre.trim()
+    if (titre === '' || valeurs.console_id === '') return
+
+    onSoumettre({
+      titre,
+      console_id: Number(valeurs.console_id),
+      statut: valeurs.statut,
+      note: valeurs.note === '' ? null : Number(valeurs.note),
+    })
+    if (!jeuInitial) setValeurs(VIDE)
+  }
+
+  return (
+    <form className={`${CARTE} mb-6 grid gap-3`} data-cy="formulaire" onSubmit={soumettre}>
+      <h2 className="text-lg font-semibold">{jeuInitial ? 'Modifier le jeu' : 'Ajouter un jeu'}</h2>
+      {consoles.length === 0 && (
+        <p className="text-amber-300" data-cy="aucune-console">
+          Ajoute d’abord une console pour pouvoir ajouter un jeu.
+        </p>
+      )}
+      <fieldset className="grid gap-3" disabled={consoles.length === 0}>
+        <label className="grid gap-1 text-sm">
+          Titre
+          <input
+            className={CHAMP}
+            name="titre"
+            data-cy="champ-titre"
+            value={valeurs.titre}
+            onChange={changer}
+            required
+          />
+        </label>
+        <label className="grid gap-1 text-sm">
+          Console
+          <select
+            className={CHAMP}
+            name="console_id"
+            data-cy="champ-console"
+            value={valeurs.console_id}
+            onChange={changer}
+            required
+          >
+            <option value="">Choisir une console</option>
+            {consoles.map((uneConsole) => (
+              <option key={uneConsole.id} value={uneConsole.id}>
+                {uneConsole.nom}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="grid gap-1 text-sm">
+          Statut
+          <select
+            className={CHAMP}
+            name="statut"
+            data-cy="champ-statut"
+            value={valeurs.statut}
+            onChange={changer}
+          >
+            {STATUTS.map((statut) => (
+              <option key={statut}>{statut}</option>
+            ))}
+          </select>
+        </label>
+        <label className="grid gap-1 text-sm">
+          Note (0 à 5)
+          <select
+            className={CHAMP}
+            name="note"
+            data-cy="champ-note"
+            value={valeurs.note}
+            onChange={changer}
+          >
+            <option value="">Aucune</option>
+            {[0, 1, 2, 3, 4, 5].map((note) => (
+              <option key={note} value={note}>
+                {note}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="flex gap-2">
+          <Bouton type="submit" data-cy="bouton-soumettre">
+            {jeuInitial ? 'Enregistrer' : 'Ajouter'}
+          </Bouton>
+          {onAnnuler && (
+            <Bouton variante="secondaire" data-cy="bouton-annuler" onClick={onAnnuler}>
+              Annuler
+            </Bouton>
+          )}
+        </div>
+      </fieldset>
+    </form>
+  )
+}
+
+export default FormulaireJeu
+```
+
+`src/components/BarreFiltres.jsx` (remplacer tout le fichier) :
+```jsx
+import { CHAMP } from '../classes.js'
+import { STATUTS } from '../jeux.js'
+
+function BarreFiltres({ recherche, onRecherche, filtres, onFiltres, consoles }) {
+  return (
+    <div className="grid gap-2 sm:grid-cols-[2fr_1fr_1fr]">
+      <input
+        className={CHAMP}
+        type="search"
+        data-cy="recherche"
+        placeholder="Rechercher un titre…"
+        aria-label="Rechercher un jeu"
+        value={recherche}
+        onChange={(evenement) => onRecherche(evenement.target.value)}
+      />
+      <select
+        className={CHAMP}
+        data-cy="filtre-console"
+        aria-label="Filtrer par console"
+        value={filtres.consoleId}
+        onChange={(evenement) =>
+          onFiltres({
+            ...filtres,
+            consoleId: evenement.target.value === '' ? '' : Number(evenement.target.value),
+          })
+        }
+      >
+        <option value="">Toutes les consoles</option>
+        {consoles.map((uneConsole) => (
+          <option key={uneConsole.id} value={uneConsole.id}>
+            {uneConsole.nom}
+          </option>
+        ))}
+      </select>
+      <select
+        className={CHAMP}
+        data-cy="filtre-statut"
+        aria-label="Filtrer par statut"
+        value={filtres.statut}
+        onChange={(evenement) => onFiltres({ ...filtres, statut: evenement.target.value })}
+      >
+        <option value="">Tous les statuts</option>
+        {STATUTS.map((statut) => (
+          <option key={statut}>{statut}</option>
+        ))}
+      </select>
+    </div>
+  )
+}
+
+export default BarreFiltres
+```
+
+`src/components/PageConsoles.jsx` (remplacer tout le fichier) :
+```jsx
+import { useState } from 'react'
+import { CARTE, CHAMP } from '../classes.js'
+import Bouton from './Bouton.jsx'
+
+function PageConsoles({ consoles, onAjouter, onRenommer, onSupprimer }) {
+  const [nouveauNom, setNouveauNom] = useState('')
+  const [edition, setEdition] = useState(null)
+
+  function ajouter(evenement) {
+    evenement.preventDefault()
+    const nom = nouveauNom.trim()
+    if (nom === '') return
+
+    onAjouter(nom)
+    setNouveauNom('')
+  }
+
+  function renommer(evenement) {
+    evenement.preventDefault()
+    const nom = edition.nom.trim()
+    if (nom === '') return
+
+    onRenommer(edition.id, nom)
+    setEdition(null)
+  }
+
+  return (
+    <section className={CARTE} data-cy="consoles">
+      <h2 className="mb-3 text-lg font-semibold">Consoles</h2>
+      <form className="flex gap-2" onSubmit={ajouter}>
+        <input
+          className={`${CHAMP} flex-1`}
+          data-cy="nouvelle-console-nom"
+          aria-label="Nom de la nouvelle console"
+          placeholder="Nouvelle console"
+          value={nouveauNom}
+          onChange={(evenement) => setNouveauNom(evenement.target.value)}
+        />
+        <Bouton type="submit" data-cy="ajouter-console">
+          Ajouter
+        </Bouton>
+      </form>
+      <ul className="mt-4 grid gap-2">
+        {consoles.map((uneConsole) => (
+          <li key={uneConsole.id} className="flex items-center justify-between gap-2" data-cy="console">
+            {edition?.id === uneConsole.id ? (
+              <form className="flex flex-1 gap-2" onSubmit={renommer}>
+                <input
+                  className={`${CHAMP} flex-1`}
+                  data-cy="champ-renommer"
+                  aria-label={`Nouveau nom de ${uneConsole.nom}`}
+                  value={edition.nom}
+                  onChange={(evenement) => setEdition({ ...edition, nom: evenement.target.value })}
+                />
+                <Bouton type="submit" data-cy="valider-renommer">
+                  Enregistrer
+                </Bouton>
+                <Bouton variante="secondaire" onClick={() => setEdition(null)}>
+                  Annuler
+                </Bouton>
+              </form>
+            ) : (
+              <>
+                <span>
+                  {uneConsole.nom} · {uneConsole.nb_jeux} {uneConsole.nb_jeux > 1 ? 'jeux' : 'jeu'}
+                </span>
+                <span className="flex gap-2">
+                  <Bouton
+                    variante="secondaire"
+                    data-cy="renommer-console"
+                    onClick={() => setEdition({ id: uneConsole.id, nom: uneConsole.nom })}
+                  >
+                    Renommer
+                  </Bouton>
+                  <Bouton
+                    variante="danger"
+                    data-cy="supprimer-console"
+                    onClick={() => onSupprimer(uneConsole.id)}
+                  >
+                    Supprimer
+                  </Bouton>
+                </span>
+              </>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+export default PageConsoles
+```
+
+Dans `src/App.jsx`, déclarer **avant** `function chargerTout()` la constante des liens :
+```jsx
+// Le lien actif est stylé grâce à l'attribut aria-current que react-router ajoute lui-même.
+const LIEN =
+  '-mb-px border-b-2 border-transparent px-1 pb-2 text-slate-400 hover:text-slate-100 aria-[current=page]:border-violet-500 aria-[current=page]:font-semibold aria-[current=page]:text-slate-100'
+
+```
+puis remplacer, dans le `return`, ces éléments :
+
+- `<main>` → `<main className="mx-auto max-w-3xl px-4 py-6">`
+- `<h1>Ma bibliothèque de jeux vidéo</h1>` → `<h1 className="mb-4 text-3xl font-bold tracking-tight">Ma bibliothèque de jeux vidéo</h1>`
+- `<nav className="navigation">` → `<nav className="mb-6 flex gap-4 border-b border-slate-800">`
+- `<NavLink to="/" data-cy="lien-jeux" onClick={() => setErreur(null)}>` → `<NavLink to="/" className={LIEN} data-cy="lien-jeux" onClick={() => setErreur(null)}>`
+- `<NavLink to="/consoles" data-cy="lien-consoles" onClick={() => setErreur(null)}>` → `<NavLink to="/consoles" className={LIEN} data-cy="lien-consoles" onClick={() => setErreur(null)}>`
+- `<p className="erreur" role="alert" data-cy="erreur">` → `<p className="mb-4 rounded-md border border-rose-500 bg-rose-500/10 px-3 py-2 text-rose-300" role="alert" data-cy="erreur">`
+- `<p className="compteur" data-cy="compteur">` → `<p className="my-3 text-sm text-slate-400" data-cy="compteur">`
+
+- [ ] **Étape 6 : Vérifier la compilation et que les classes sont générées**
+
+Run: `npm test`
+Expected: `Tests  12 passed (12)`.
+
+Run: `npm run build`
+Expected: se termine sans erreur.
+
+Run: `npm run lint`
+Expected: aucune erreur. Si une règle du modèle signale ce code, appliquer le correctif le plus petit possible et le mentionner dans le message du commit suivant.
+
+Run: `grep -c 'bg-slate-950' dist/assets/*.css && grep -c 'aria-current' dist/assets/*.css`
+Expected: deux nombres supérieurs ou égaux à `1` (les classes utilitaires et la variante `aria-[current=page]` ont bien été générées).
+
+- [ ] **Étape 7 : Les tests passent sans modification**
+
+Arrêter tout serveur qui occuperait les ports 5173 ou 3001, supprimer d'éventuelles anciennes bases (`rm -f server/jeux.db server/jeux.test.db`), puis dans un terminal `npm run dev:test`, et dans un autre `npm run cypress:lancer`.
+Expected: `All specs passed!` avec 30 tests (14 + 8 + 8).
+
+Run: `git diff --quiet 07-consoles -- cypress src/recherche.test.js && echo "tests inchangés"`
+Expected: affiche `tests inchangés`.
+
+- [ ] **Étape 8 : Montrer que les tests protègent l'habillage**
+
+Dans `src/components/CarteJeu.jsx`, retirer temporairement l'attribut `data-cy="supprimer"` du bouton « Supprimer ». Avec `dev:test` toujours actif (Vite recharge à chaud), relancer `npx cypress run --spec cypress/e2e/bibliotheque.cy.js`.
+Expected: **échec** de « supprime un jeu » (élément `[data-cy="supprimer"]` introuvable).
+
+Puis annuler : `git checkout src/components/CarteJeu.jsx` n'est pas possible tant que les fichiers ne sont pas commités : remettre l'attribut à la main, puis relancer la spec.
+Expected: 8 tests réussis.
+
+- [ ] **Étape 9 : Contrôler le rendu avec une capture d'écran**
+
+Fichier temporaire, **à ne pas commiter** : `cypress/e2e/capture.cy.js` :
+```js
+describe('Capture', () => {
+  it('prend des captures de la page des jeux et de la page des consoles', () => {
+    cy.request('POST', '/api/test/reinitialiser')
+    cy.request('POST', '/api/consoles', { nom: 'Switch' }).then((reponse) => {
+      const consoleId = reponse.body.id
+      cy.request('POST', '/api/jeux', { titre: 'Zelda', console_id: consoleId, statut: 'terminé', note: 5 })
+      cy.request('POST', '/api/jeux', { titre: 'Celeste', console_id: consoleId, statut: 'en cours' })
+    })
+    cy.request('POST', '/api/consoles', { nom: 'PC' })
+    cy.viewport(900, 900)
+    cy.visit('/')
+    cy.screenshot('accueil', { capture: 'fullPage' })
+    cy.get('[data-cy="lien-consoles"]').click()
+    cy.screenshot('consoles', { capture: 'fullPage' })
+  })
+})
+```
+
+Run: `npx cypress run --spec cypress/e2e/capture.cy.js`
+Expected: 1 test réussi ; les images `cypress/screenshots/capture.cy.js/accueil.png` et `consoles.png` existent. Les ouvrir et vérifier : fond sombre, cartes lisibles, lien actif souligné en violet, boutons violets et rouges, titre grand.
+
+Puis supprimer : `rm cypress/e2e/capture.cy.js` et arrêter `dev:test` (`rm -f server/jeux.test.db`).
+
+- [ ] **Étape 10 : Commit de l'habillage**
+
+```bash
+git status --short
+git add src
+git commit -m "Vidéo 8 : habille l'application avec Tailwind (thème sombre)"
+```
+Expected: `git status --short` ne montre, avant le `git add`, que des fichiers de `src/`.
+
+- [ ] **Étape 11 : Mettre à jour le `README`**
+
+Dans `README.md` :
+- remplacer « série de 7 vidéos » par « série de 8 vidéos » ;
+- remplacer la ligne `| 7 | Consoles et relations 1-N | `07-consoles` (identique à `main`) |` par les deux lignes
+  `| 7 | Consoles et relations 1-N | `07-consoles` |` et `| 8 | Habillage avec Tailwind | `08-tailwind` (identique à `main`) |` ;
+- ajouter, à la fin de la section « Passer d'une branche à une autre (à partir de la vidéo 5) », cette phrase :
+
+````markdown
+Après un changement de branche, relance aussi `npm install` : certaines branches ajoutent des dépendances (par exemple `react-router` en vidéo 7, Tailwind en vidéo 8).
+````
+
+```bash
+git add README.md
+git commit -m "Vidéo 8 : met à jour le README (8 vidéos)"
+```
+
+- [ ] **Étape 12 : Commit de transition et branche**
+
+```bash
+git commit --allow-empty -m "Fin de la vidéo 8 : habillage avec Tailwind"
+git branch 08-tailwind
+```
+Expected: `git rev-parse main 08-tailwind` donne deux fois le même identifiant ; `07-consoles` n'a pas bougé.
+
+- [ ] **Étape 13 : Vérification finale**
+
+Run: `npm test && npm run build && npm run lint`
+Expected: tout passe (`Tests  12 passed (12)`).
+
+Run: `git log --oneline --grep='^Fin de la vidéo'`
+Expected: huit lignes, de `Fin de la vidéo 8 : habillage avec Tailwind` à `Fin de la vidéo 1 : mise en place`.
 
 Run: `git log --oneline --merges | wc -l` puis `git status --short | wc -l`
 Expected: `0` et `0`.

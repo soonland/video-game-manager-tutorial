@@ -2,7 +2,7 @@
 
 ## Objectif
 
-Une série de 7 vidéos d'apprentissage qui guide des **débutants** dans la création d'une application de gestion de bibliothèque de jeux vidéo. Les concepts au centre du tutoriel :
+Une série de 8 vidéos d'apprentissage qui guide des **débutants** dans la création d'une application de gestion de bibliothèque de jeux vidéo. Les concepts au centre du tutoriel :
 
 - les opérations CRUD
 - la recherche et les filtres
@@ -22,7 +22,8 @@ La stack finale (React + Vite, Express, SQLite) est atteinte progressivement. Ch
 | Base de données | SQLite | Un seul fichier, aucune installation de serveur |
 | Tests unitaires | Vitest | S'intègre à Vite sans configuration |
 | Tests E2E | Cypress | Demandé explicitement |
-| Style | CSS écrit à la main, sobre | L'apprentissage porte sur le code, pas sur le design |
+| Style (vidéos 1 à 7) | CSS écrit à la main, sobre | L'apprentissage porte sur le code, pas sur le design |
+| Style (vidéo 8) | Tailwind (dernière version), thème sombre unique | Habiller l'application sans changer son comportement ; éléments HTML natifs conservés, donc tests inchangés |
 | Navigation (vidéo 7) | `react-router`, deux routes | Introduit le routage côté client pour la seconde page « Consoles » |
 | Organisation | Un seul `package.json` à la racine, pas de monorepo | Pas d'outillage de monorepo (workspaces, Turborepo) à expliquer |
 | Progression | Une branche git par fin de vidéo | Permet de « voyager » dans le tutoriel sans tout refaire |
@@ -99,7 +100,7 @@ Chaque vidéo se termine par la même consigne : **le lecteur fait un commit dan
 - **Résultat :** les jeux survivent au rechargement de la page et au redémarrage du serveur.
 - **Décision de conception :** `ajouter`, `modifier` et `supprimer` passent côté serveur. La **recherche et les filtres restent côté client** : le front récupère toute la liste et réutilise les fonctions déjà testées en vidéo 4. Limite à dire dans la vidéo : cela ne passerait pas à l'échelle sur des milliers de jeux. Le filtrage en SQL est une piste d'extension.
 - **Pièges :** oublier `express.json()`, requêtes SQL construites avec du texte (montrer les requêtes paramétrées), erreurs CORS (évitées par le proxy).
-- **À surveiller au tournage :** si la vidéo devient trop longue, la scinder en deux (8 vidéos au total avec la vidéo 7).
+- **À surveiller au tournage :** si la vidéo devient trop longue, la scinder en deux (9 vidéos au total avec les vidéos 7 et 8).
 
 ### Vidéo 6 : Tests Cypress
 - **Plan :** installer Cypress, écrire un premier scénario (la page s'affiche), puis les scénarios de bout en bout : ajouter, modifier, rechercher, filtrer et supprimer un jeu. Cibler les éléments avec des attributs `data-cy`.
@@ -133,7 +134,25 @@ Chaque vidéo se termine par la même consigne : **le lecteur fait un commit dan
   - Nouveaux scénarios : ajouter, renommer et supprimer une console vide (sur la page `/consoles`) ; refus de supprimer une console qui contient des jeux ; doublon de nom refusé ; obligation de choisir une console pour un jeu ; navigation entre les deux pages, y compris l'ouverture directe de `/consoles`.
   - `api.cy.js` ajoute les cas `409`, `404` et `400` des consoles.
   - La route de réinitialisation vide aussi `consoles`.
-- **Conclusion de la série :** pistes pour la suite : TypeScript, authentification, API externe comme RAWG, relations N-N, séparation front/back en deux packages dans un vrai projet.
+
+### Vidéo 8 : Habillage avec Tailwind
+- **But :** habiller toute l'application sans changer son comportement. Preuve : les 12 tests Vitest et les 30 tests Cypress passent **sans aucune modification**.
+- **Thème (un seul, sombre) :** fond `slate-950` ; cartes, formulaires et page des consoles `slate-900` avec bordure `slate-700` ; texte `slate-100` (secondaire `slate-400`) ; accent `violet-500` ; danger `rose-500` ; avertissement `amber-300`. Pas de mode clair/sombre automatique (trop de classes en double pour des débutants).
+- **Plan :**
+  1. Installer `tailwindcss` et `@tailwindcss/vite` (dernières versions), ajouter le plugin à `vite.config.js`. Aucun fichier de configuration : Tailwind se configure en CSS.
+  2. Réduire `src/index.css` à `@import "tailwindcss";` : tout le CSS écrit à la main disparaît.
+  3. Remplacer, composant par composant, les `className` par des classes utilitaires (`App`, navigation, bandeau d'erreur, `CarteJeu`, `ListeJeux`, `FormulaireJeu`, `BarreFiltres`, `PageConsoles`).
+  4. Extraire un composant `Bouton` (variantes principal, secondaire, danger) et un fichier de classes partagées (`CHAMP`, `CARTE`) pour ne pas répéter les mêmes longues listes de classes.
+  5. Ajouter un point de rupture responsive (la barre de filtres passe en colonne sur petit écran).
+  6. Contrôler le rendu avec une capture d'écran prise par Cypress.
+- **Contraintes pour que les tests restent intacts :** structure HTML, textes et attributs `data-cy` inchangés ; les `<select>` restent natifs ; les liens de navigation gardent une `className` de type chaîne (`NavLink` y ajoute la classe `active`) et le lien actif est stylé via `aria-current="page"`.
+- **Résultat :** une application au rendu soigné, avec exactement le même comportement.
+- **Concepts :** classes utilitaires, variantes (`hover:`, `sm:`, `aria-[…]:`), factorisation en composant, tests comme filet de sécurité d'un refactoring visuel.
+- **Pièges :**
+  - Le « preflight » de Tailwind remet à zéro les styles du navigateur : le `h1` perd sa taille, les listes perdent leurs puces.
+  - Les noms de classes doivent être écrits en entier : un nom construit par morceaux n'est pas détecté.
+  - Passer une fonction à `className` sur `NavLink` supprime la classe `active` ajoutée par `react-router`.
+- **Conclusion de la série :** pistes pour la suite : TypeScript, authentification, API externe comme RAWG, relations N-N, mode clair/sombre automatique, séparation front/back en deux packages dans un vrai projet.
 
 ## Dépôt de référence et branches git
 
@@ -152,7 +171,8 @@ Chaque branche est une étiquette qui pointe vers le commit de transition corres
 | `04-tests-unitaires` | Commit de transition de la vidéo 4 |
 | `05-api-sqlite` | Commit de transition de la vidéo 5 |
 | `06-cypress` | Commit de transition de la vidéo 6 |
-| `07-consoles` | Commit de transition de la vidéo 7, identique à `main` |
+| `07-consoles` | Commit de transition de la vidéo 7 |
+| `08-tailwind` | Commit de transition de la vidéo 8, identique à `main` |
 
 - `git log --oneline` sur `main` sert de table des matières du tutoriel.
 - Le point de départ de la vidéo 1 est un dossier vide.
@@ -189,5 +209,6 @@ La vidéo 1 y renvoie et ne refait qu'une démonstration courte de `git init` et
 - Déploiement
 - Filtrage et recherche en SQL
 - Relations N-N (un jeu sur plusieurs consoles)
+- Mode clair/sombre automatique
 - Migrations de schéma
 - Monorepo avec outillage (workspaces, Turborepo)
