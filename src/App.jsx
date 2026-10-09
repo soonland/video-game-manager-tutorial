@@ -59,7 +59,7 @@ function App() {
     <main>
       <h1>Ma bibliothèque de jeux vidéo</h1>
       {erreur && (
-        <p className="erreur" role="alert">
+        <p className="erreur" role="alert" data-cy="erreur">
           Une erreur est survenue : {erreur}
         </p>
       )}
@@ -79,7 +79,7 @@ function App() {
         filtres={filtres}
         onFiltres={setFiltres}
       />
-      <p className="compteur">
+      <p className="compteur" data-cy="compteur">
         {jeuxAffiches.length} / {jeux.length} jeux
       </p>
       <ListeJeux jeux={jeuxAffiches} onModifier={setJeuEnEdition} onSupprimer={supprimer} />

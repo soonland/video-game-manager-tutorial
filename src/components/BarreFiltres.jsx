@@ -5,12 +5,14 @@ function BarreFiltres({ recherche, onRecherche, filtres, onFiltres }) {
     <div className="barre-filtres">
       <input
         type="search"
+        data-cy="recherche"
         placeholder="Rechercher un titre…"
         aria-label="Rechercher un jeu"
         value={recherche}
         onChange={(evenement) => onRecherche(evenement.target.value)}
       />
       <select
+        data-cy="filtre-plateforme"
         aria-label="Filtrer par plateforme"
         value={filtres.plateforme}
         onChange={(evenement) => onFiltres({ ...filtres, plateforme: evenement.target.value })}
@@ -21,6 +23,7 @@ function BarreFiltres({ recherche, onRecherche, filtres, onFiltres }) {
         ))}
       </select>
       <select
+        data-cy="filtre-statut"
         aria-label="Filtrer par statut"
         value={filtres.statut}
         onChange={(evenement) => onFiltres({ ...filtres, statut: evenement.target.value })}
