@@ -1,6 +1,6 @@
 # Bibliothèque de jeux vidéo : dépôt de référence
 
-Ce dépôt accompagne la série de 7 vidéos « Créer une application de gestion de bibliothèque de jeux vidéo » (React + Vite, Express, SQLite, Vitest, Cypress).
+Ce dépôt accompagne la série de 8 vidéos « Créer une application de gestion de bibliothèque de jeux vidéo » (React + Vite, Express, SQLite, Vitest, Cypress).
 
 Il n'est **pas** fait pour être cloné puis lu : tu apprends davantage en construisant **ton propre projet** en suivant les vidéos. Ce dépôt sert à comparer ton travail et à reprendre si tu es bloqué.
 
@@ -40,7 +40,8 @@ L'historique de `main` est linéaire. Chaque branche pointe vers le commit `Fin 
 | 4 | Tests unitaires (Vitest) | `04-tests-unitaires` |
 | 5 | API et SQLite | `05-api-sqlite` |
 | 6 | Tests Cypress | `06-cypress` |
-| 7 | Consoles et relations 1-N | `07-consoles` (identique à `main`) |
+| 7 | Consoles et relations 1-N | `07-consoles` |
+| 8 | Habillage avec Tailwind | `08-tailwind` (identique à `main`) |
 
 ## Commandes
 
@@ -59,6 +60,13 @@ L'historique de `main` est linéaire. Chaque branche pointe vers le commit `Fin 
 
 `better-sqlite3` est un module natif. Dans la plupart des cas un binaire précompilé est téléchargé. Sinon, installe les outils de compilation de ton système (Xcode Command Line Tools sur macOS, `build-essential` sur Linux, « Desktop development with C++ » sur Windows) puis relance `npm install`.
 
+## Avertissements « allow-scripts » (npm récent)
+
+Selon ta version de npm, `npm install` peut afficher `npm warn allow-scripts` à propos de paquets qui ont un script d'installation (`better-sqlite3`, `cypress`, `fsevents`). Si l'application et les tests fonctionnent, tu peux ignorer ces avertissements. Si une commande échoue ensuite :
+
+- Cypress dit que son binaire est introuvable : lance `npx cypress install`.
+- `better-sqlite3` ne se charge pas : lance `npm approve-scripts better-sqlite3` puis `npm rebuild better-sqlite3`.
+
 ## Passer d'une branche à une autre (à partir de la vidéo 5)
 
 La base de données est un fichier (`server/jeux.db`) qui n'est pas dans git. Quand le schéma change (par exemple entre `06-cypress` et `07-consoles`), **supprime ce fichier** avant de relancer l'application : SQLite ne modifie pas une table qui existe déjà, et l'ancien fichier ferait échouer le démarrage.
@@ -67,6 +75,8 @@ La base de données est un fichier (`server/jeux.db`) qui n'est pas dans git. Qu
 rm -f server/jeux.db
 npm run dev
 ```
+
+Après un changement de branche, relance aussi `npm install` : certaines branches ajoutent des dépendances (par exemple `react-router` en vidéo 7, Tailwind en vidéo 8).
 
 ## Lancer les tests Cypress
 

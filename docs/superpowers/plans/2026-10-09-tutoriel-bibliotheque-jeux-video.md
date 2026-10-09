@@ -4251,7 +4251,7 @@ import { STATUTS } from '../jeux.js'
 
 function BarreFiltres({ recherche, onRecherche, filtres, onFiltres, consoles }) {
   return (
-    <div className="grid gap-2 sm:grid-cols-[2fr_1fr_1fr]">
+    <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
       <input
         className={CHAMP}
         type="search"
