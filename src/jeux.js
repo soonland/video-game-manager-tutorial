@@ -18,10 +18,10 @@ export function rechercherJeux(jeux, texte) {
   return jeux.filter((jeu) => normaliser(jeu.titre).includes(recherche))
 }
 
-export function filtrerJeux(jeux, { plateforme = '', statut = '' } = {}) {
+export function filtrerJeux(jeux, { consoleId = '', statut = '' } = {}) {
   return jeux.filter(
     (jeu) =>
-      (plateforme === '' || jeu.plateforme === plateforme) &&
+      (consoleId === '' || jeu.console_id === consoleId) &&
       (statut === '' || jeu.statut === statut),
   )
 }

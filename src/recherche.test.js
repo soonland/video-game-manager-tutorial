@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest'
 import { filtrerJeux, rechercherJeux } from './jeux.js'
 
 const jeux = [
-  { id: 1, titre: 'Pokémon Épée', plateforme: 'Switch', statut: 'terminé', note: 3 },
-  { id: 2, titre: 'Hades', plateforme: 'PC', statut: 'en cours', note: null },
-  { id: 3, titre: 'Hollow Knight', plateforme: 'PC', statut: 'terminé', note: 5 },
+  { id: 1, titre: 'Pokémon Épée', console_id: 4, statut: 'terminé', note: 3 },
+  { id: 2, titre: 'Hades', console_id: 1, statut: 'en cours', note: null },
+  { id: 3, titre: 'Hollow Knight', console_id: 1, statut: 'terminé', note: 5 },
 ]
 
 const ids = (liste) => liste.map((jeu) => jeu.id)
@@ -43,22 +43,22 @@ describe('filtrerJeux', () => {
   })
 
   it('renvoie tous les jeux quand les filtres sont vides', () => {
-    expect(filtrerJeux(jeux, { plateforme: '', statut: '' })).toEqual(jeux)
+    expect(filtrerJeux(jeux, { consoleId: '', statut: '' })).toEqual(jeux)
   })
 
-  it('filtre par plateforme', () => {
-    expect(ids(filtrerJeux(jeux, { plateforme: 'PC' }))).toEqual([2, 3])
+  it('filtre par console', () => {
+    expect(ids(filtrerJeux(jeux, { consoleId: 1 }))).toEqual([2, 3])
   })
 
   it('filtre par statut', () => {
     expect(ids(filtrerJeux(jeux, { statut: 'terminé' }))).toEqual([1, 3])
   })
 
-  it('combine plateforme et statut', () => {
-    expect(ids(filtrerJeux(jeux, { plateforme: 'PC', statut: 'terminé' }))).toEqual([3])
+  it('combine console et statut', () => {
+    expect(ids(filtrerJeux(jeux, { consoleId: 1, statut: 'terminé' }))).toEqual([3])
   })
 
   it('renvoie une liste vide quand aucune combinaison ne correspond', () => {
-    expect(filtrerJeux(jeux, { plateforme: 'Switch', statut: 'en cours' })).toEqual([])
+    expect(filtrerJeux(jeux, { consoleId: 4, statut: 'en cours' })).toEqual([])
   })
 })
