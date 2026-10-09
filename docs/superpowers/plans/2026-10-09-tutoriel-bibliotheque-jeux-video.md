@@ -22,7 +22,7 @@
 - Interface, messages d'erreur, noms de fonctions et commentaires en **français**.
 - Les composants React ne font qu'appeler les fonctions de `src/jeux.js` (et, à partir de la vidéo 5, de `src/api.js`) ; la logique métier n'est jamais dans les composants.
 - Historique **linéaire** sur `main`, **un commit par étape** de la vidéo, puis un commit de transition au message exact `Fin de la vidéo N : <sujet>`.
-- Branches, une par fin de vidéo : `01-mise-en-place`, `02-crud`, `03-recherche-filtres`, `04-tests-unitaires`, `05-api-sqlite`, `06-cypress` (identique à `main`).
+- Branches, une par fin de vidéo : `01-mise-en-place`, `02-crud`, `03-recherche-filtres`, `04-tests-unitaires`, `05-api-sqlite`, `06-cypress`, puis `07-consoles` (identique à `main`).
 - La recherche et les filtres restent **côté client** en vidéo 5 : le front récupère toute la liste.
 - Cypress travaille sur une **base de test séparée**, remise à zéro avant chaque test par une route réservée au mode test.
 - Les éléments ciblés par Cypress utilisent des attributs `data-cy` (introduits en vidéo 6).
@@ -2345,7 +2345,7 @@ Expected, six lignes, de la plus récente à la plus ancienne :
 ```
 
 Run: `git branch --list` et `git rev-parse main 06-cypress`
-Expected: les six branches `01-…` à `06-…` plus `main` existent ; `main` et `06-cypress` affichent le même identifiant de commit.
+Expected: les six branches `01-…` à `06-…` plus `main` existent ; `main` et `06-cypress` affichent le même identifiant de commit (avant la tâche 8 ; après, c'est `07-consoles` qui est identique à `main`).
 
 Run: `git log --oneline --merges | wc -l`
 Expected: `0` (historique linéaire).
@@ -2385,3 +2385,1482 @@ Expected: `0`.
 
 Run: `git status --short`
 Expected: aucune sortie (arbre propre).
+
+---
+
+## Tâche 8 : Vidéo 7, Consoles et relations 1-N
+
+Le dépôt de référence existe déjà jusqu'à la vidéo 6 (`main` = `06-cypress`). Cette tâche **ajoute des commits à la suite** ; les branches `01-…` à `06-…` ne bougent pas.
+
+**Convention de cette tâche :** un bloc de code précédé d'une ligne `` `chemin` (remplacer tout le fichier) : `` ou `` `chemin` (nouveau fichier) : `` est le contenu **complet** du fichier.
+
+**Fichiers :**
+- Modifier : `server/db.js`, `server/donnees.js`, `server/index.js`
+- Modifier : `src/api.js`, `src/jeux.js`, `src/recherche.test.js`, `src/App.jsx`, `src/index.css`
+- Modifier : `src/components/CarteJeu.jsx`, `src/components/FormulaireJeu.jsx`, `src/components/BarreFiltres.jsx`
+- Créer : `src/components/SectionConsoles.jsx`
+- Modifier : `cypress/e2e/bibliotheque.cy.js`, `cypress/e2e/api.cy.js`
+- Créer : `cypress/e2e/consoles.cy.js`
+- Modifier : `README.md`, spec et plan (commit de documents)
+
+**Interfaces :**
+- Consomme : le front, l'API, les tests Vitest et Cypress de la tâche 6 (`main`).
+- Produit, côté serveur :
+  - Table `consoles(id, nom UNIQUE NOT NULL COLLATE NOCASE)` ; table `jeux(id, titre, console_id NOT NULL REFERENCES consoles(id), statut, note)`. `PRAGMA foreign_keys = ON`.
+  - `semerSiVide(consoles, jeux)` dans `server/db.js` : `consoles` est un tableau de noms, `jeux` un tableau d'objets `{ titre, plateforme, statut, note }` où `plateforme` est le **nom** de la console.
+  - `CONSOLES_INITIALES` (`['PC', 'PlayStation', 'Xbox', 'Switch']`, donc ids 1 à 4) et `JEUX_INITIAUX` dans `server/donnees.js`.
+  - `GET /api/consoles` → `200` + `[{ id, nom, nb_jeux }]` triés par `id`.
+  - `POST /api/consoles` `{ nom }` → `201` + `{ id, nom, nb_jeux }` ; `400` `Le nom est obligatoire.` ; `409` `Cette console existe déjà.` (comparaison sans tenir compte de la casse).
+  - `PUT /api/consoles/:id` `{ nom }` → `200` + la console ; `400` ; `404` `Console introuvable.` ; `409` doublon.
+  - `DELETE /api/consoles/:id` → `204` ; `404` `Console introuvable.` ; `409` `Cette console contient encore des jeux.`
+  - `GET /api/jeux` → `[{ id, titre, console_id, console, statut, note }]` (`console` = nom de la console).
+  - `POST` et `PUT /api/jeux` reçoivent `{ titre, console_id, statut, note? }` ; `400` `La console est obligatoire.` si `console_id` n'est pas un entier ; `400` `Console inconnue.` si elle n'existe pas ; les autres règles de la tâche 5 restent.
+  - La route de test `POST /api/test/reinitialiser` vide aussi `consoles` et remet les compteurs à zéro.
+- Produit, côté front :
+  - `src/api.js` : `chargerConsoles()`, `creerConsole(nom)`, `mettreAJourConsole(id, nom)`, `retirerConsole(id)`.
+  - `filtrerJeux(jeux, { consoleId = '', statut = '' } = {})` : `consoleId` est `''` (pas de filtre) ou un nombre comparé à `jeu.console_id`. `PLATEFORMES` disparaît de `src/jeux.js`.
+  - `FormulaireJeu({ jeuInitial?, consoles, onSoumettre(donnees), onAnnuler? })` où `donnees` est `{ titre, console_id, statut, note }`.
+  - `BarreFiltres({ recherche, onRecherche, filtres, onFiltres, consoles })` avec `filtres = { consoleId, statut }`.
+  - `SectionConsoles({ consoles, onAjouter(nom), onRenommer(id, nom), onSupprimer(id) })`.
+  - Attributs `data-cy` ajoutés : `champ-console`, `aucune-console`, `filtre-console` (remplace `filtre-plateforme`), `console`, `nouvelle-console-nom`, `ajouter-console`, `renommer-console`, `champ-renommer`, `valider-renommer`, `supprimer-console`.
+
+- [ ] **Étape 1 : Commit des documents**
+
+La spec et le plan décrivent maintenant la vidéo 7.
+
+```bash
+git add docs
+git commit -m "Documents : ajoute la vidéo 7 (consoles et relations 1-N) à la spec et au plan"
+```
+
+- [ ] **Étape 2 : Écrire les tests de `filtrerJeux` par console (RED)**
+
+`src/recherche.test.js` (remplacer tout le fichier) :
+```js
+import { describe, it, expect } from 'vitest'
+import { filtrerJeux, rechercherJeux } from './jeux.js'
+
+const jeux = [
+  { id: 1, titre: 'Pokémon Épée', console_id: 4, statut: 'terminé', note: 3 },
+  { id: 2, titre: 'Hades', console_id: 1, statut: 'en cours', note: null },
+  { id: 3, titre: 'Hollow Knight', console_id: 1, statut: 'terminé', note: 5 },
+]
+
+const ids = (liste) => liste.map((jeu) => jeu.id)
+
+describe('rechercherJeux', () => {
+  it('renvoie tous les jeux quand le texte est vide', () => {
+    expect(rechercherJeux(jeux, '')).toEqual(jeux)
+  })
+
+  it('ignore les majuscules et les minuscules', () => {
+    expect(ids(rechercherJeux(jeux, 'HADES'))).toEqual([2])
+  })
+
+  it('ignore les accents du titre', () => {
+    expect(ids(rechercherJeux(jeux, 'pokemon epee'))).toEqual([1])
+  })
+
+  it('ignore les accents du texte recherché', () => {
+    const sansAccent = [{ ...jeux[0], titre: 'Pokemon Sword' }]
+
+    expect(rechercherJeux(sansAccent, 'POKÉMON')).toHaveLength(1)
+  })
+
+  it('ignore les espaces autour du texte', () => {
+    expect(ids(rechercherJeux(jeux, '  hollow  '))).toEqual([3])
+  })
+
+  it('renvoie une liste vide quand rien ne correspond', () => {
+    expect(rechercherJeux(jeux, 'zzz')).toEqual([])
+  })
+})
+
+describe('filtrerJeux', () => {
+  it('renvoie tous les jeux sans filtre', () => {
+    expect(filtrerJeux(jeux)).toEqual(jeux)
+  })
+
+  it('renvoie tous les jeux quand les filtres sont vides', () => {
+    expect(filtrerJeux(jeux, { consoleId: '', statut: '' })).toEqual(jeux)
+  })
+
+  it('filtre par console', () => {
+    expect(ids(filtrerJeux(jeux, { consoleId: 1 }))).toEqual([2, 3])
+  })
+
+  it('filtre par statut', () => {
+    expect(ids(filtrerJeux(jeux, { statut: 'terminé' }))).toEqual([1, 3])
+  })
+
+  it('combine console et statut', () => {
+    expect(ids(filtrerJeux(jeux, { consoleId: 1, statut: 'terminé' }))).toEqual([3])
+  })
+
+  it('renvoie une liste vide quand aucune combinaison ne correspond', () => {
+    expect(filtrerJeux(jeux, { consoleId: 4, statut: 'en cours' })).toEqual([])
+  })
+})
+```
+
+Run: `npm test`
+Expected: **échec** de 3 tests de `filtrerJeux` (« filtre par console », « combine console et statut », « renvoie une liste vide quand aucune combinaison ne correspond ») : la fonction ignore encore `consoleId`. Les 9 autres tests de ce fichier et les 0 autres fichiers passent : `Tests  3 failed | 9 passed (12)`.
+
+- [ ] **Étape 3 : `filtrerJeux` filtre sur `consoleId` (GREEN)**
+
+Dans `src/jeux.js`, remplacer :
+```js
+export function filtrerJeux(jeux, { plateforme = '', statut = '' } = {}) {
+  return jeux.filter(
+    (jeu) =>
+      (plateforme === '' || jeu.plateforme === plateforme) &&
+      (statut === '' || jeu.statut === statut),
+  )
+}
+```
+par :
+```js
+export function filtrerJeux(jeux, { consoleId = '', statut = '' } = {}) {
+  return jeux.filter(
+    (jeu) =>
+      (consoleId === '' || jeu.console_id === consoleId) &&
+      (statut === '' || jeu.statut === statut),
+  )
+}
+```
+
+Run: `npm test`
+Expected: `Tests  12 passed (12)`.
+
+- [ ] **Étape 4 : Commit des tests et de la fonction**
+
+```bash
+git add src/jeux.js src/recherche.test.js
+git commit -m "Vidéo 7 : filtre les jeux par console (consoleId)"
+```
+
+- [ ] **Étape 5 : Le nouveau schéma et le semis**
+
+`server/db.js` (remplacer tout le fichier) :
+```js
+import Database from 'better-sqlite3'
+
+const fichier = process.env.DB_FICHIER ?? 'server/jeux.db'
+
+export const db = new Database(fichier)
+
+// SQLite n'applique pas les clés étrangères par défaut : il faut les activer.
+db.pragma('foreign_keys = ON')
+
+// Attention : CREATE TABLE IF NOT EXISTS ne modifie pas une table qui existe déjà.
+// Après un changement de schéma, supprime le fichier de base (server/jeux.db).
+db.exec(`
+  CREATE TABLE IF NOT EXISTS consoles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nom TEXT NOT NULL UNIQUE COLLATE NOCASE
+  );
+
+  CREATE TABLE IF NOT EXISTS jeux (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    titre TEXT NOT NULL,
+    console_id INTEGER NOT NULL REFERENCES consoles(id),
+    statut TEXT NOT NULL,
+    note INTEGER
+  );
+`)
+
+// Remplit la base avec des consoles et des jeux d'exemple, seulement si elle est vide.
+// Chaque jeu désigne sa console par son nom (champ "plateforme" de donnees.js).
+export function semerSiVide(consoles, jeux) {
+  const { total } = db.prepare('SELECT COUNT(*) AS total FROM consoles').get()
+  if (total > 0) return
+
+  const insererConsole = db.prepare('INSERT INTO consoles (nom) VALUES (?)')
+  const insererJeu = db.prepare(
+    'INSERT INTO jeux (titre, console_id, statut, note) VALUES (?, ?, ?, ?)',
+  )
+  const semer = db.transaction(() => {
+    const idParNom = {}
+    for (const nom of consoles) {
+      idParNom[nom] = insererConsole.run(nom).lastInsertRowid
+    }
+    for (const { titre, plateforme, statut, note } of jeux) {
+      insererJeu.run(titre, idParNom[plateforme], statut, note ?? null)
+    }
+  })
+  semer()
+}
+```
+
+Dans `server/donnees.js`, ajouter **avant** `export const JEUX_INITIAUX` :
+```js
+export const CONSOLES_INITIALES = ['PC', 'PlayStation', 'Xbox', 'Switch']
+
+```
+
+- [ ] **Étape 6 : Vérifier que les clés étrangères sont bien appliquées**
+
+Run:
+```bash
+rm -f server/essai.db
+DB_FICHIER=server/essai.db node --input-type=module -e "
+import { db } from './server/db.js'
+try {
+  db.prepare('INSERT INTO jeux (titre, console_id, statut) VALUES (?, ?, ?)').run('x', 9999, 'terminé')
+  console.log('ACCEPTÉ (mauvais signe)')
+} catch (e) {
+  console.log(e.message)
+}"
+rm -f server/essai.db
+```
+Expected: `FOREIGN KEY constraint failed`.
+
+- [ ] **Étape 7 : Commit du schéma**
+
+```bash
+git add server/db.js server/donnees.js
+git commit -m "Vidéo 7 : crée la table des consoles et relie les jeux par console_id"
+```
+
+- [ ] **Étape 8 : L'API des consoles et des jeux**
+
+`server/index.js` (remplacer tout le fichier) :
+```js
+import express from 'express'
+import { db, semerSiVide } from './db.js'
+import { CONSOLES_INITIALES, JEUX_INITIAUX } from './donnees.js'
+
+// Le serveur a sa propre liste de statuts : il ne dépend pas du code du front.
+const STATUTS = ['à jouer', 'en cours', 'terminé']
+const PORT = process.env.PORT ?? 3001
+
+// Un jeu est toujours lu avec le nom de sa console (JOIN).
+const SELECT_JEUX = `
+  SELECT jeux.id, jeux.titre, jeux.console_id, consoles.nom AS console, jeux.statut, jeux.note
+  FROM jeux JOIN consoles ON consoles.id = jeux.console_id
+`
+
+// Une console est lue avec le nombre de jeux qu'elle contient.
+const SELECT_CONSOLES = `
+  SELECT consoles.id, consoles.nom, COUNT(jeux.id) AS nb_jeux
+  FROM consoles LEFT JOIN jeux ON jeux.console_id = consoles.id
+`
+
+const app = express()
+app.use(express.json())
+
+// Renvoie un message d'erreur si le corps est invalide, sinon null.
+function validerJeu(corps) {
+  if (typeof corps.titre !== 'string' || corps.titre.trim() === '') {
+    return 'Le titre est obligatoire.'
+  }
+  if (!Number.isInteger(corps.console_id)) {
+    return 'La console est obligatoire.'
+  }
+  if (!db.prepare('SELECT 1 FROM consoles WHERE id = ?').get(corps.console_id)) {
+    return 'Console inconnue.'
+  }
+  if (!STATUTS.includes(corps.statut)) {
+    return 'Le statut est invalide.'
+  }
+  const note = corps.note ?? null
+  if (note !== null && !(Number.isInteger(note) && note >= 0 && note <= 5)) {
+    return 'La note doit être un entier entre 0 et 5.'
+  }
+  return null
+}
+
+function validerConsole(corps) {
+  if (typeof corps.nom !== 'string' || corps.nom.trim() === '') {
+    return 'Le nom est obligatoire.'
+  }
+  return null
+}
+
+function lireId(req) {
+  const id = Number(req.params.id)
+  return Number.isInteger(id) ? id : null
+}
+
+function lireConsole(id) {
+  return db.prepare(`${SELECT_CONSOLES} WHERE consoles.id = ? GROUP BY consoles.id`).get(id)
+}
+
+function estDoublon(erreur) {
+  return erreur.code === 'SQLITE_CONSTRAINT_UNIQUE'
+}
+
+function jeuIntrouvable(res) {
+  return res.status(404).json({ erreur: 'Jeu introuvable.' })
+}
+
+function consoleIntrouvable(res) {
+  return res.status(404).json({ erreur: 'Console introuvable.' })
+}
+
+// --- Jeux ---
+
+app.get('/api/jeux', (req, res) => {
+  res.json(db.prepare(`${SELECT_JEUX} ORDER BY jeux.id`).all())
+})
+
+app.post('/api/jeux', (req, res) => {
+  const erreur = validerJeu(req.body ?? {})
+  if (erreur) return res.status(400).json({ erreur })
+
+  const { titre, console_id, statut, note = null } = req.body
+  const resultat = db
+    .prepare('INSERT INTO jeux (titre, console_id, statut, note) VALUES (?, ?, ?, ?)')
+    .run(titre.trim(), console_id, statut, note)
+  res.status(201).json(db.prepare(`${SELECT_JEUX} WHERE jeux.id = ?`).get(resultat.lastInsertRowid))
+})
+
+app.put('/api/jeux/:id', (req, res) => {
+  const id = lireId(req)
+  if (id === null) return jeuIntrouvable(res)
+
+  const erreur = validerJeu(req.body ?? {})
+  if (erreur) return res.status(400).json({ erreur })
+
+  const { titre, console_id, statut, note = null } = req.body
+  const resultat = db
+    .prepare('UPDATE jeux SET titre = ?, console_id = ?, statut = ?, note = ? WHERE id = ?')
+    .run(titre.trim(), console_id, statut, note, id)
+  if (resultat.changes === 0) return jeuIntrouvable(res)
+
+  res.json(db.prepare(`${SELECT_JEUX} WHERE jeux.id = ?`).get(id))
+})
+
+app.delete('/api/jeux/:id', (req, res) => {
+  const id = lireId(req)
+  if (id === null) return jeuIntrouvable(res)
+
+  const resultat = db.prepare('DELETE FROM jeux WHERE id = ?').run(id)
+  if (resultat.changes === 0) return jeuIntrouvable(res)
+
+  res.status(204).end()
+})
+
+// --- Consoles ---
+
+app.get('/api/consoles', (req, res) => {
+  res.json(db.prepare(`${SELECT_CONSOLES} GROUP BY consoles.id ORDER BY consoles.id`).all())
+})
+
+app.post('/api/consoles', (req, res) => {
+  const erreur = validerConsole(req.body ?? {})
+  if (erreur) return res.status(400).json({ erreur })
+
+  try {
+    const resultat = db.prepare('INSERT INTO consoles (nom) VALUES (?)').run(req.body.nom.trim())
+    res.status(201).json(lireConsole(resultat.lastInsertRowid))
+  } catch (e) {
+    if (estDoublon(e)) return res.status(409).json({ erreur: 'Cette console existe déjà.' })
+    throw e
+  }
+})
+
+app.put('/api/consoles/:id', (req, res) => {
+  const id = lireId(req)
+  if (id === null) return consoleIntrouvable(res)
+
+  const erreur = validerConsole(req.body ?? {})
+  if (erreur) return res.status(400).json({ erreur })
+
+  try {
+    const resultat = db
+      .prepare('UPDATE consoles SET nom = ? WHERE id = ?')
+      .run(req.body.nom.trim(), id)
+    if (resultat.changes === 0) return consoleIntrouvable(res)
+    res.json(lireConsole(id))
+  } catch (e) {
+    if (estDoublon(e)) return res.status(409).json({ erreur: 'Cette console existe déjà.' })
+    throw e
+  }
+})
+
+app.delete('/api/consoles/:id', (req, res) => {
+  const id = lireId(req)
+  if (id === null) return consoleIntrouvable(res)
+
+  const existante = lireConsole(id)
+  if (!existante) return consoleIntrouvable(res)
+  if (existante.nb_jeux > 0) {
+    return res.status(409).json({ erreur: 'Cette console contient encore des jeux.' })
+  }
+
+  db.prepare('DELETE FROM consoles WHERE id = ?').run(id)
+  res.status(204).end()
+})
+
+if (process.env.APP_ENV === 'test') {
+  // Route réservée aux tests : repart d'une base vide avant chaque scénario.
+  // Les jeux sont supprimés avant les consoles à cause de la clé étrangère.
+  app.post('/api/test/reinitialiser', (req, res) => {
+    db.exec(`
+      DELETE FROM jeux;
+      DELETE FROM consoles;
+      DELETE FROM sqlite_sequence WHERE name IN ('jeux', 'consoles');
+    `)
+    res.status(204).end()
+  })
+} else {
+  semerSiVide(CONSOLES_INITIALES, JEUX_INITIAUX)
+}
+
+app.listen(PORT, () => {
+  console.log(`Serveur démarré sur http://localhost:${PORT}`)
+})
+```
+
+- [ ] **Étape 9 : Vérifier l'API avec `curl` (base jetable)**
+
+Ce bloc utilise une base temporaire `server/essai.db` (ignorée par git) et supprime l'éventuelle ancienne base de développement `server/jeux.db`.
+
+```bash
+rm -f server/jeux.db server/essai.db
+DB_FICHIER=server/essai.db PORT=3011 node server/index.js & SERVEUR=$!
+sleep 1.5
+JSON='Content-Type: application/json'
+
+echo "--- GET consoles : 4"
+curl -s localhost:3011/api/consoles | grep -o '"nom"' | wc -l
+echo "--- GET jeux : 30, avec le nom de la console"
+curl -s localhost:3011/api/jeux | grep -o '"id"' | wc -l
+curl -s localhost:3011/api/jeux | grep -o '"id":1,"titre":"The Legend of Zelda: Breath of the Wild","console_id":4,"console":"Switch"'
+echo "--- POST console nom vide : 400"
+curl -s -w ' [%{http_code}]\n' -X POST localhost:3011/api/consoles -H "$JSON" -d '{"nom":"   "}'
+echo "--- POST console doublon (casse différente) : 409"
+curl -s -w ' [%{http_code}]\n' -X POST localhost:3011/api/consoles -H "$JSON" -d '{"nom":"pc"}'
+echo "--- POST console valide : 201"
+curl -s -w ' [%{http_code}]\n' -X POST localhost:3011/api/consoles -H "$JSON" -d '{"nom":"Steam Deck"}'
+echo "--- PUT console : 200"
+curl -s -w ' [%{http_code}]\n' -X PUT localhost:3011/api/consoles/5 -H "$JSON" -d '{"nom":"Steam Deck OLED"}'
+echo "--- PUT console inconnue : 404"
+curl -s -w ' [%{http_code}]\n' -X PUT localhost:3011/api/consoles/9999 -H "$JSON" -d '{"nom":"X"}'
+echo "--- DELETE console avec jeux : 409"
+curl -s -w ' [%{http_code}]\n' -X DELETE localhost:3011/api/consoles/4
+echo "--- DELETE console vide : 204"
+curl -s -o /dev/null -w '[%{http_code}]\n' -X DELETE localhost:3011/api/consoles/5
+echo "--- DELETE console inconnue : 404"
+curl -s -w ' [%{http_code}]\n' -X DELETE localhost:3011/api/consoles/9999
+echo "--- POST jeu console inconnue : 400"
+curl -s -w ' [%{http_code}]\n' -X POST localhost:3011/api/jeux -H "$JSON" -d '{"titre":"X","console_id":9999,"statut":"terminé"}'
+echo "--- POST jeu sans console : 400"
+curl -s -w ' [%{http_code}]\n' -X POST localhost:3011/api/jeux -H "$JSON" -d '{"titre":"X","statut":"terminé"}'
+echo "--- POST jeu valide avec apostrophe : 201"
+curl -s -w ' [%{http_code}]\n' -X POST localhost:3011/api/jeux -H "$JSON" -d '{"titre":"Assassin'"'"'s Creed","console_id":1,"statut":"à jouer"}'
+echo "--- PUT jeu inconnu : 404"
+curl -s -w ' [%{http_code}]\n' -X PUT localhost:3011/api/jeux/9999 -H "$JSON" -d '{"titre":"X","console_id":1,"statut":"terminé"}'
+echo "--- PC contient 9 jeux"
+curl -s localhost:3011/api/consoles | grep -o '"nom":"PC","nb_jeux":9'
+
+kill $SERVEUR
+rm -f server/essai.db
+```
+
+Expected, dans l'ordre :
+- `4`
+- `30`
+- `"id":1,"titre":"The Legend of Zelda: Breath of the Wild","console_id":4,"console":"Switch"`
+- `{"erreur":"Le nom est obligatoire."} [400]`
+- `{"erreur":"Cette console existe déjà."} [409]`
+- `{"id":5,"nom":"Steam Deck","nb_jeux":0} [201]`
+- `{"id":5,"nom":"Steam Deck OLED","nb_jeux":0} [200]`
+- `{"erreur":"Console introuvable."} [404]`
+- `{"erreur":"Cette console contient encore des jeux."} [409]`
+- `[204]`
+- `{"erreur":"Console introuvable."} [404]`
+- `{"erreur":"Console inconnue."} [400]`
+- `{"erreur":"La console est obligatoire."} [400]`
+- `{"id":31,"titre":"Assassin's Creed","console_id":1,"console":"PC","statut":"à jouer","note":null} [201]`
+- `{"erreur":"Jeu introuvable."} [404]`
+- `"nom":"PC","nb_jeux":9`
+
+- [ ] **Étape 10 : Commit de l'API**
+
+```bash
+git add server/index.js
+git commit -m "Vidéo 7 : ajoute les routes des consoles et adapte les routes des jeux"
+```
+
+- [ ] **Étape 11 : Le client d'API**
+
+Dans `src/api.js`, ajouter à la fin :
+```js
+
+const URL_CONSOLES = '/api/consoles'
+
+export function chargerConsoles() {
+  return demander(URL_CONSOLES)
+}
+
+export function creerConsole(nom) {
+  return envoyer('POST', URL_CONSOLES, { nom })
+}
+
+export function mettreAJourConsole(id, nom) {
+  return envoyer('PUT', `${URL_CONSOLES}/${id}`, { nom })
+}
+
+export function retirerConsole(id) {
+  return demander(`${URL_CONSOLES}/${id}`, { method: 'DELETE' })
+}
+```
+
+- [ ] **Étape 12 : Les composants qui affichent ou choisissent une console**
+
+`src/components/CarteJeu.jsx` (remplacer tout le fichier) :
+```jsx
+function CarteJeu({ jeu, onModifier, onSupprimer }) {
+  return (
+    <li className="carte-jeu" data-cy="carte-jeu">
+      <h2>{jeu.titre}</h2>
+      <p>
+        {jeu.console} · {jeu.statut}
+      </p>
+      {jeu.note !== null && <p>Note : {jeu.note}/5</p>}
+      <div className="carte-actions">
+        <button
+          type="button"
+          className="secondaire"
+          data-cy="modifier"
+          onClick={() => onModifier(jeu)}
+        >
+          Modifier
+        </button>
+        <button
+          type="button"
+          className="danger"
+          data-cy="supprimer"
+          onClick={() => onSupprimer(jeu.id)}
+        >
+          Supprimer
+        </button>
+      </div>
+    </li>
+  )
+}
+
+export default CarteJeu
+```
+
+`src/components/FormulaireJeu.jsx` (remplacer tout le fichier) :
+```jsx
+import { useState } from 'react'
+import { STATUTS } from '../jeux.js'
+
+const VIDE = { titre: '', console_id: '', statut: STATUTS[0], note: '' }
+
+function FormulaireJeu({ jeuInitial, consoles, onSoumettre, onAnnuler }) {
+  const [valeurs, setValeurs] = useState(
+    jeuInitial ? { ...jeuInitial, note: jeuInitial.note ?? '' } : VIDE,
+  )
+
+  function changer(evenement) {
+    const { name, value } = evenement.target
+    setValeurs({ ...valeurs, [name]: value })
+  }
+
+  function soumettre(evenement) {
+    evenement.preventDefault()
+    const titre = valeurs.titre.trim()
+    if (titre === '' || valeurs.console_id === '') return
+
+    onSoumettre({
+      titre,
+      console_id: Number(valeurs.console_id),
+      statut: valeurs.statut,
+      note: valeurs.note === '' ? null : Number(valeurs.note),
+    })
+    if (!jeuInitial) setValeurs(VIDE)
+  }
+
+  return (
+    <form className="formulaire" data-cy="formulaire" onSubmit={soumettre}>
+      <h2>{jeuInitial ? 'Modifier le jeu' : 'Ajouter un jeu'}</h2>
+      {consoles.length === 0 && (
+        <p data-cy="aucune-console">Ajoute d’abord une console pour pouvoir ajouter un jeu.</p>
+      )}
+      <fieldset disabled={consoles.length === 0}>
+        <label>
+          Titre
+          <input
+            name="titre"
+            data-cy="champ-titre"
+            value={valeurs.titre}
+            onChange={changer}
+            required
+          />
+        </label>
+        <label>
+          Console
+          <select
+            name="console_id"
+            data-cy="champ-console"
+            value={valeurs.console_id}
+            onChange={changer}
+            required
+          >
+            <option value="">Choisir une console</option>
+            {consoles.map((uneConsole) => (
+              <option key={uneConsole.id} value={uneConsole.id}>
+                {uneConsole.nom}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Statut
+          <select name="statut" data-cy="champ-statut" value={valeurs.statut} onChange={changer}>
+            {STATUTS.map((statut) => (
+              <option key={statut}>{statut}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Note (0 à 5)
+          <select name="note" data-cy="champ-note" value={valeurs.note} onChange={changer}>
+            <option value="">Aucune</option>
+            {[0, 1, 2, 3, 4, 5].map((note) => (
+              <option key={note} value={note}>
+                {note}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="actions">
+          <button type="submit" data-cy="bouton-soumettre">
+            {jeuInitial ? 'Enregistrer' : 'Ajouter'}
+          </button>
+          {onAnnuler && (
+            <button
+              type="button"
+              className="secondaire"
+              data-cy="bouton-annuler"
+              onClick={onAnnuler}
+            >
+              Annuler
+            </button>
+          )}
+        </div>
+      </fieldset>
+    </form>
+  )
+}
+
+export default FormulaireJeu
+```
+
+`src/components/BarreFiltres.jsx` (remplacer tout le fichier) :
+```jsx
+import { STATUTS } from '../jeux.js'
+
+function BarreFiltres({ recherche, onRecherche, filtres, onFiltres, consoles }) {
+  return (
+    <div className="barre-filtres">
+      <input
+        type="search"
+        data-cy="recherche"
+        placeholder="Rechercher un titre…"
+        aria-label="Rechercher un jeu"
+        value={recherche}
+        onChange={(evenement) => onRecherche(evenement.target.value)}
+      />
+      <select
+        data-cy="filtre-console"
+        aria-label="Filtrer par console"
+        value={filtres.consoleId}
+        onChange={(evenement) =>
+          onFiltres({
+            ...filtres,
+            consoleId: evenement.target.value === '' ? '' : Number(evenement.target.value),
+          })
+        }
+      >
+        <option value="">Toutes les consoles</option>
+        {consoles.map((uneConsole) => (
+          <option key={uneConsole.id} value={uneConsole.id}>
+            {uneConsole.nom}
+          </option>
+        ))}
+      </select>
+      <select
+        data-cy="filtre-statut"
+        aria-label="Filtrer par statut"
+        value={filtres.statut}
+        onChange={(evenement) => onFiltres({ ...filtres, statut: evenement.target.value })}
+      >
+        <option value="">Tous les statuts</option>
+        {STATUTS.map((statut) => (
+          <option key={statut}>{statut}</option>
+        ))}
+      </select>
+    </div>
+  )
+}
+
+export default BarreFiltres
+```
+
+- [ ] **Étape 13 : La section « Consoles »**
+
+`src/components/SectionConsoles.jsx` (nouveau fichier) :
+```jsx
+import { useState } from 'react'
+
+function SectionConsoles({ consoles, onAjouter, onRenommer, onSupprimer }) {
+  const [nouveauNom, setNouveauNom] = useState('')
+  const [edition, setEdition] = useState(null)
+
+  function ajouter(evenement) {
+    evenement.preventDefault()
+    const nom = nouveauNom.trim()
+    if (nom === '') return
+
+    onAjouter(nom)
+    setNouveauNom('')
+  }
+
+  function renommer(evenement) {
+    evenement.preventDefault()
+    const nom = edition.nom.trim()
+    if (nom === '') return
+
+    onRenommer(edition.id, nom)
+    setEdition(null)
+  }
+
+  return (
+    <section className="consoles" data-cy="consoles">
+      <h2>Consoles</h2>
+      <form className="formulaire-console" onSubmit={ajouter}>
+        <input
+          data-cy="nouvelle-console-nom"
+          aria-label="Nom de la nouvelle console"
+          placeholder="Nouvelle console"
+          value={nouveauNom}
+          onChange={(evenement) => setNouveauNom(evenement.target.value)}
+        />
+        <button type="submit" data-cy="ajouter-console">
+          Ajouter
+        </button>
+      </form>
+      <ul className="liste-consoles">
+        {consoles.map((uneConsole) => (
+          <li key={uneConsole.id} data-cy="console">
+            {edition?.id === uneConsole.id ? (
+              <form className="formulaire-console" onSubmit={renommer}>
+                <input
+                  data-cy="champ-renommer"
+                  aria-label={`Nouveau nom de ${uneConsole.nom}`}
+                  value={edition.nom}
+                  onChange={(evenement) => setEdition({ ...edition, nom: evenement.target.value })}
+                />
+                <button type="submit" data-cy="valider-renommer">
+                  Enregistrer
+                </button>
+                <button type="button" className="secondaire" onClick={() => setEdition(null)}>
+                  Annuler
+                </button>
+              </form>
+            ) : (
+              <>
+                <span>
+                  {uneConsole.nom} · {uneConsole.nb_jeux} {uneConsole.nb_jeux > 1 ? 'jeux' : 'jeu'}
+                </span>
+                <span className="carte-actions">
+                  <button
+                    type="button"
+                    className="secondaire"
+                    data-cy="renommer-console"
+                    onClick={() => setEdition({ id: uneConsole.id, nom: uneConsole.nom })}
+                  >
+                    Renommer
+                  </button>
+                  <button
+                    type="button"
+                    className="danger"
+                    data-cy="supprimer-console"
+                    onClick={() => onSupprimer(uneConsole.id)}
+                  >
+                    Supprimer
+                  </button>
+                </span>
+              </>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+export default SectionConsoles
+```
+
+- [ ] **Étape 14 : `App` charge et gère les consoles**
+
+`src/App.jsx` (remplacer tout le fichier) :
+```jsx
+import { useEffect, useState } from 'react'
+import BarreFiltres from './components/BarreFiltres.jsx'
+import FormulaireJeu from './components/FormulaireJeu.jsx'
+import ListeJeux from './components/ListeJeux.jsx'
+import SectionConsoles from './components/SectionConsoles.jsx'
+import {
+  chargerConsoles,
+  chargerJeux,
+  creerConsole,
+  creerJeu,
+  mettreAJourConsole,
+  mettreAJourJeu,
+  retirerConsole,
+  retirerJeu,
+} from './api.js'
+import { filtrerJeux, rechercherJeux } from './jeux.js'
+
+function chargerTout() {
+  return Promise.all([chargerJeux(), chargerConsoles()])
+}
+
+function App() {
+  const [jeux, setJeux] = useState([])
+  const [consoles, setConsoles] = useState([])
+  const [erreur, setErreur] = useState(null)
+  const [jeuEnEdition, setJeuEnEdition] = useState(null)
+  const [recherche, setRecherche] = useState('')
+  const [filtres, setFiltres] = useState({ consoleId: '', statut: '' })
+
+  // La recherche et les filtres restent côté client : on filtre la liste complète reçue du serveur.
+  const jeuxAffiches = filtrerJeux(rechercherJeux(jeux, recherche), filtres)
+
+  function appliquer([listeJeux, listeConsoles]) {
+    setJeux(listeJeux)
+    setConsoles(listeConsoles)
+    setErreur(null)
+  }
+
+  async function recharger() {
+    try {
+      appliquer(await chargerTout())
+    } catch (e) {
+      setErreur(e.message)
+    }
+  }
+
+  useEffect(() => {
+    chargerTout()
+      .then(appliquer)
+      .catch((e) => setErreur(e.message))
+  }, [])
+
+  // Exécute une action sur le serveur, puis recharge les jeux et les consoles.
+  async function executer(action) {
+    try {
+      await action()
+      await recharger()
+    } catch (e) {
+      setErreur(e.message)
+    }
+  }
+
+  function ajouter(donnees) {
+    return executer(() => creerJeu(donnees))
+  }
+
+  function enregistrerModification(donnees) {
+    const id = jeuEnEdition.id
+    setJeuEnEdition(null)
+    return executer(() => mettreAJourJeu(id, donnees))
+  }
+
+  function supprimer(id) {
+    if (jeuEnEdition?.id === id) setJeuEnEdition(null)
+    return executer(() => retirerJeu(id))
+  }
+
+  function ajouterConsole(nom) {
+    return executer(() => creerConsole(nom))
+  }
+
+  function renommerConsole(id, nom) {
+    return executer(() => mettreAJourConsole(id, nom))
+  }
+
+  function supprimerConsole(id) {
+    return executer(() => retirerConsole(id))
+  }
+
+  return (
+    <main>
+      <h1>Ma bibliothèque de jeux vidéo</h1>
+      {erreur && (
+        <p className="erreur" role="alert" data-cy="erreur">
+          Une erreur est survenue : {erreur}
+        </p>
+      )}
+      <SectionConsoles
+        consoles={consoles}
+        onAjouter={ajouterConsole}
+        onRenommer={renommerConsole}
+        onSupprimer={supprimerConsole}
+      />
+      {jeuEnEdition ? (
+        <FormulaireJeu
+          key={jeuEnEdition.id}
+          jeuInitial={jeuEnEdition}
+          consoles={consoles}
+          onSoumettre={enregistrerModification}
+          onAnnuler={() => setJeuEnEdition(null)}
+        />
+      ) : (
+        <FormulaireJeu key="nouveau" consoles={consoles} onSoumettre={ajouter} />
+      )}
+      <BarreFiltres
+        recherche={recherche}
+        onRecherche={setRecherche}
+        filtres={filtres}
+        onFiltres={setFiltres}
+        consoles={consoles}
+      />
+      <p className="compteur" data-cy="compteur">
+        {jeuxAffiches.length} / {jeux.length} jeux
+      </p>
+      <ListeJeux jeux={jeuxAffiches} onModifier={setJeuEnEdition} onSupprimer={supprimer} />
+    </main>
+  )
+}
+
+export default App
+```
+
+- [ ] **Étape 15 : Retirer `PLATEFORMES` et ajouter les styles**
+
+Dans `src/jeux.js`, supprimer la ligne :
+```js
+export const PLATEFORMES = ['PC', 'PlayStation', 'Xbox', 'Switch']
+```
+
+Ajouter à la fin de `src/index.css` :
+```css
+
+fieldset {
+  display: grid;
+  gap: 12px;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.consoles {
+  background: white;
+  border: 1px solid var(--bordure);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.consoles h2 {
+  margin: 0 0 12px;
+  font-size: 1.1rem;
+}
+
+.formulaire-console {
+  display: flex;
+  gap: 8px;
+}
+
+.formulaire-console input {
+  flex: 1;
+}
+
+.liste-consoles {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+  display: grid;
+  gap: 8px;
+}
+
+.liste-consoles li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+```
+
+- [ ] **Étape 16 : Vérifier le front**
+
+Run: `npm test`
+Expected: `Tests  12 passed (12)`.
+
+Run: `npm run build`
+Expected: se termine sans erreur.
+
+Run: `npm run lint`
+Expected: aucune erreur. Si une règle du modèle signale ce code, appliquer le correctif le plus petit possible et le mentionner dans le message du commit suivant.
+
+- [ ] **Étape 17 : Commit du front**
+
+```bash
+git add src
+git commit -m "Vidéo 7 : gère les consoles dans l'interface et choisit la console d'un jeu"
+```
+
+- [ ] **Étape 18 : Adapter les scénarios Cypress existants**
+
+`cypress/e2e/bibliotheque.cy.js` (remplacer tout le fichier) :
+```js
+const ZELDA = { titre: 'Zelda', console: 'Switch', statut: 'terminé', note: 5 }
+const HADES = { titre: 'Hades', console: 'PC', statut: 'en cours', note: null }
+const POKEMON = { titre: 'Pokémon Épée', console: 'Switch', statut: 'terminé', note: 3 }
+
+// Crée les consoles Switch et PC, puis les jeux, directement via l'API
+// (plus rapide que de passer par les formulaires), puis ouvre la page.
+function visiterAvec(jeux) {
+  const ids = {}
+  ;['Switch', 'PC'].forEach((nom) => {
+    cy.request('POST', '/api/consoles', { nom }).then((reponse) => {
+      ids[nom] = reponse.body.id
+    })
+  })
+  cy.then(() => {
+    jeux.forEach(({ console: nomConsole, ...jeu }) => {
+      cy.request('POST', '/api/jeux', { ...jeu, console_id: ids[nomConsole] })
+    })
+  })
+  cy.visit('/')
+}
+
+describe('Bibliothèque de jeux vidéo', () => {
+  beforeEach(() => {
+    // Chaque test repart d'une base de test vide.
+    cy.request('POST', '/api/test/reinitialiser')
+  })
+
+  it('affiche la page avec une bibliothèque vide', () => {
+    cy.visit('/')
+
+    cy.contains('h1', 'Ma bibliothèque de jeux vidéo')
+    cy.get('[data-cy="carte-jeu"]').should('not.exist')
+    cy.get('[data-cy="aucun-jeu"]').should('be.visible')
+    cy.get('[data-cy="compteur"]').should('have.text', '0 / 0 jeux')
+  })
+
+  it('ajoute un jeu et le retrouve après rechargement', () => {
+    visiterAvec([])
+
+    cy.get('[data-cy="champ-titre"]').type("Assassin's Creed")
+    cy.get('[data-cy="champ-console"]').select('PC')
+    cy.get('[data-cy="champ-statut"]').select('en cours')
+    cy.get('[data-cy="champ-note"]').select('4')
+    cy.get('[data-cy="bouton-soumettre"]').click()
+
+    cy.get('[data-cy="carte-jeu"]')
+      .should('have.length', 1)
+      .and('contain', "Assassin's Creed")
+      .and('contain', 'PC')
+    cy.get('[data-cy="champ-titre"]').should('have.value', '')
+
+    cy.reload()
+    cy.get('[data-cy="carte-jeu"]').should('have.length', 1).and('contain', "Assassin's Creed")
+  })
+
+  it('modifie un jeu', () => {
+    visiterAvec([ZELDA])
+
+    cy.get('[data-cy="modifier"]').click()
+    cy.get('[data-cy="champ-titre"]').should('have.value', 'Zelda')
+    cy.get('[data-cy="champ-titre"]').clear().type('Zelda BOTW')
+    cy.get('[data-cy="champ-statut"]').select('en cours')
+    cy.get('[data-cy="bouton-soumettre"]').click()
+
+    cy.get('[data-cy="carte-jeu"]').should('have.length', 1)
+    cy.get('[data-cy="carte-jeu"]').should('contain', 'Zelda BOTW').and('contain', 'en cours')
+    cy.get('[data-cy="bouton-soumettre"]').should('contain', 'Ajouter')
+  })
+
+  it('supprime un jeu', () => {
+    visiterAvec([ZELDA, HADES])
+
+    cy.contains('[data-cy="carte-jeu"]', 'Zelda').find('[data-cy="supprimer"]').click()
+
+    cy.get('[data-cy="carte-jeu"]').should('have.length', 1).and('contain', 'Hades')
+    cy.contains('Zelda').should('not.exist')
+  })
+
+  it('recherche un jeu sans tenir compte des accents ni de la casse', () => {
+    visiterAvec([ZELDA, HADES, POKEMON])
+    cy.get('[data-cy="carte-jeu"]').should('have.length', 3)
+
+    cy.get('[data-cy="recherche"]').type('pokemon')
+    cy.get('[data-cy="carte-jeu"]').should('have.length', 1).and('contain', 'Pokémon Épée')
+
+    cy.get('[data-cy="recherche"]').clear()
+    cy.get('[data-cy="carte-jeu"]').should('have.length', 3)
+
+    cy.get('[data-cy="recherche"]').type('zzz')
+    cy.get('[data-cy="carte-jeu"]').should('not.exist')
+    cy.get('[data-cy="aucun-jeu"]').should('be.visible')
+  })
+
+  it('filtre par console et par statut', () => {
+    visiterAvec([ZELDA, HADES, POKEMON])
+
+    cy.get('[data-cy="filtre-console"]').select('Switch')
+    cy.get('[data-cy="carte-jeu"]').should('have.length', 2)
+    cy.get('[data-cy="compteur"]').should('have.text', '2 / 3 jeux')
+
+    cy.get('[data-cy="filtre-statut"]').select('en cours')
+    cy.get('[data-cy="carte-jeu"]').should('not.exist')
+    cy.get('[data-cy="aucun-jeu"]').should('be.visible')
+
+    cy.get('[data-cy="filtre-console"]').select('Toutes les consoles')
+    cy.get('[data-cy="carte-jeu"]').should('have.length', 1).and('contain', 'Hades')
+  })
+
+  it('refuse un titre vide ou fait d’espaces', () => {
+    visiterAvec([])
+
+    cy.get('[data-cy="champ-console"]').select('PC')
+    cy.get('[data-cy="bouton-soumettre"]').click()
+    cy.get('[data-cy="carte-jeu"]').should('not.exist')
+
+    cy.get('[data-cy="champ-titre"]').type('   ')
+    cy.get('[data-cy="bouton-soumettre"]').click()
+    cy.get('[data-cy="carte-jeu"]').should('not.exist')
+  })
+
+  it('affiche un message quand le serveur répond par une erreur', () => {
+    cy.intercept('GET', '/api/jeux', { statusCode: 500, body: { erreur: 'Boom' } })
+
+    cy.visit('/')
+
+    cy.get('[data-cy="erreur"]').should('contain', 'Boom')
+  })
+})
+```
+
+- [ ] **Étape 19 : Les scénarios des consoles**
+
+`cypress/e2e/consoles.cy.js` (nouveau fichier) :
+```js
+describe('Consoles', () => {
+  beforeEach(() => {
+    cy.request('POST', '/api/test/reinitialiser')
+  })
+
+  it('désactive le formulaire des jeux tant qu’aucune console n’existe', () => {
+    cy.visit('/')
+
+    cy.get('[data-cy="aucune-console"]').should('be.visible')
+    cy.get('[data-cy="champ-titre"]').should('be.disabled')
+  })
+
+  it('ajoute une console', () => {
+    cy.visit('/')
+
+    cy.get('[data-cy="nouvelle-console-nom"]').type('Steam Deck')
+    cy.get('[data-cy="ajouter-console"]').click()
+
+    cy.get('[data-cy="console"]').should('have.length', 1).and('contain', 'Steam Deck')
+    cy.get('[data-cy="console"]').should('contain', '0 jeu')
+    cy.get('[data-cy="aucune-console"]').should('not.exist')
+    cy.get('[data-cy="champ-console"]').select('Steam Deck')
+  })
+
+  it('renomme une console et met à jour les cartes de ses jeux', () => {
+    cy.request('POST', '/api/consoles', { nom: 'Switch' }).then((reponse) => {
+      cy.request('POST', '/api/jeux', {
+        titre: 'Zelda',
+        console_id: reponse.body.id,
+        statut: 'terminé',
+        note: 5,
+      })
+    })
+    cy.visit('/')
+    cy.get('[data-cy="carte-jeu"]').should('contain', 'Switch')
+
+    cy.get('[data-cy="renommer-console"]').click()
+    cy.get('[data-cy="champ-renommer"]').clear().type('Nintendo Switch')
+    cy.get('[data-cy="valider-renommer"]').click()
+
+    cy.get('[data-cy="console"]').should('contain', 'Nintendo Switch').and('contain', '1 jeu')
+    cy.get('[data-cy="carte-jeu"]').should('contain', 'Nintendo Switch')
+  })
+
+  it('supprime une console vide', () => {
+    cy.request('POST', '/api/consoles', { nom: 'Dreamcast' })
+    cy.visit('/')
+    cy.get('[data-cy="console"]').should('have.length', 1)
+
+    cy.get('[data-cy="supprimer-console"]').click()
+
+    cy.get('[data-cy="console"]').should('not.exist')
+    cy.get('[data-cy="erreur"]').should('not.exist')
+  })
+
+  it('refuse de supprimer une console qui contient encore des jeux', () => {
+    cy.request('POST', '/api/consoles', { nom: 'Xbox' }).then((reponse) => {
+      cy.request('POST', '/api/jeux', {
+        titre: 'Halo',
+        console_id: reponse.body.id,
+        statut: 'à jouer',
+        note: null,
+      })
+    })
+    cy.visit('/')
+
+    cy.get('[data-cy="supprimer-console"]').click()
+
+    cy.get('[data-cy="erreur"]').should('contain', 'Cette console contient encore des jeux.')
+    cy.get('[data-cy="console"]').should('have.length', 1).and('contain', 'Xbox')
+    cy.get('[data-cy="carte-jeu"]').should('have.length', 1)
+  })
+
+  it('refuse un nom de console déjà utilisé, sans tenir compte de la casse', () => {
+    cy.request('POST', '/api/consoles', { nom: 'PC' })
+    cy.visit('/')
+
+    cy.get('[data-cy="nouvelle-console-nom"]').type('pc')
+    cy.get('[data-cy="ajouter-console"]').click()
+
+    cy.get('[data-cy="erreur"]').should('contain', 'Cette console existe déjà.')
+    cy.get('[data-cy="console"]').should('have.length', 1)
+  })
+
+  it('oblige à choisir une console pour ajouter un jeu', () => {
+    cy.request('POST', '/api/consoles', { nom: 'PC' })
+    cy.visit('/')
+
+    cy.get('[data-cy="champ-titre"]').type('Portal 2')
+    cy.get('[data-cy="bouton-soumettre"]').click()
+
+    cy.get('[data-cy="carte-jeu"]').should('not.exist')
+  })
+})
+```
+
+- [ ] **Étape 20 : Adapter les scénarios de l'API**
+
+`cypress/e2e/api.cy.js` (remplacer tout le fichier) :
+```js
+let consoleId
+
+const valide = () => ({ titre: 'Hades', console_id: consoleId, statut: 'terminé', note: 5 })
+
+function requete(methode, url, corps) {
+  return cy.request({ method: methode, url, body: corps, failOnStatusCode: false })
+}
+
+describe('API des jeux', () => {
+  beforeEach(() => {
+    cy.request('POST', '/api/test/reinitialiser')
+    cy.request('POST', '/api/consoles', { nom: 'PC' }).then((reponse) => {
+      consoleId = reponse.body.id
+    })
+  })
+
+  it('refuse un titre vide', () => {
+    requete('POST', '/api/jeux', { ...valide(), titre: '   ' }).then((reponse) => {
+      expect(reponse.status).to.eq(400)
+      expect(reponse.body.erreur).to.eq('Le titre est obligatoire.')
+    })
+  })
+
+  it('refuse un statut invalide', () => {
+    requete('POST', '/api/jeux', { ...valide(), statut: 'nimporte' })
+      .its('status')
+      .should('eq', 400)
+  })
+
+  it('refuse une note hors de 0 à 5', () => {
+    requete('POST', '/api/jeux', { ...valide(), note: 7 }).its('status').should('eq', 400)
+  })
+
+  it('refuse un jeu sans console', () => {
+    requete('POST', '/api/jeux', { titre: 'Hades', statut: 'terminé' }).then((reponse) => {
+      expect(reponse.status).to.eq(400)
+      expect(reponse.body.erreur).to.eq('La console est obligatoire.')
+    })
+  })
+
+  it('refuse un jeu dont la console n’existe pas', () => {
+    requete('POST', '/api/jeux', { ...valide(), console_id: 9999 }).then((reponse) => {
+      expect(reponse.status).to.eq(400)
+      expect(reponse.body.erreur).to.eq('Console inconnue.')
+    })
+  })
+
+  it('répond 404 quand on modifie un jeu inexistant', () => {
+    requete('PUT', '/api/jeux/9999', valide()).then((reponse) => {
+      expect(reponse.status).to.eq(404)
+      expect(reponse.body.erreur).to.eq('Jeu introuvable.')
+    })
+  })
+
+  it('répond 404 quand on supprime un jeu inexistant', () => {
+    requete('DELETE', '/api/jeux/9999').its('status').should('eq', 404)
+  })
+
+  it('crée un jeu puis le renvoie dans la liste avec le nom de sa console', () => {
+    requete('POST', '/api/jeux', valide()).then((reponse) => {
+      expect(reponse.status).to.eq(201)
+      expect(reponse.body).to.deep.include({ id: 1, titre: 'Hades', console: 'PC' })
+    })
+
+    requete('GET', '/api/jeux').then((reponse) => {
+      expect(reponse.body).to.have.length(1)
+      expect(reponse.body[0]).to.deep.include({ titre: 'Hades', console_id: consoleId, console: 'PC' })
+    })
+  })
+})
+
+describe('API des consoles', () => {
+  beforeEach(() => {
+    cy.request('POST', '/api/test/reinitialiser')
+  })
+
+  it('refuse un nom vide', () => {
+    requete('POST', '/api/consoles', { nom: '   ' }).then((reponse) => {
+      expect(reponse.status).to.eq(400)
+      expect(reponse.body.erreur).to.eq('Le nom est obligatoire.')
+    })
+  })
+
+  it('refuse un nom déjà utilisé, sans tenir compte de la casse', () => {
+    requete('POST', '/api/consoles', { nom: 'PC' }).its('status').should('eq', 201)
+    requete('POST', '/api/consoles', { nom: 'pc' }).then((reponse) => {
+      expect(reponse.status).to.eq(409)
+      expect(reponse.body.erreur).to.eq('Cette console existe déjà.')
+    })
+  })
+
+  it('répond 404 quand on modifie une console inexistante', () => {
+    requete('PUT', '/api/consoles/9999', { nom: 'X' }).then((reponse) => {
+      expect(reponse.status).to.eq(404)
+      expect(reponse.body.erreur).to.eq('Console introuvable.')
+    })
+  })
+
+  it('répond 404 quand on supprime une console inexistante', () => {
+    requete('DELETE', '/api/consoles/9999').its('status').should('eq', 404)
+  })
+
+  it('refuse de supprimer une console qui contient des jeux', () => {
+    requete('POST', '/api/consoles', { nom: 'Xbox' }).then((console) => {
+      requete('POST', '/api/jeux', {
+        titre: 'Halo',
+        console_id: console.body.id,
+        statut: 'à jouer',
+      })
+      requete('DELETE', `/api/consoles/${console.body.id}`).then((reponse) => {
+        expect(reponse.status).to.eq(409)
+        expect(reponse.body.erreur).to.eq('Cette console contient encore des jeux.')
+      })
+    })
+  })
+
+  it('supprime une console vide et compte les jeux des autres', () => {
+    requete('POST', '/api/consoles', { nom: 'Dreamcast' }).then((vide) => {
+      requete('DELETE', `/api/consoles/${vide.body.id}`).its('status').should('eq', 204)
+    })
+    requete('POST', '/api/consoles', { nom: 'Xbox' }).then((xbox) => {
+      requete('POST', '/api/jeux', { titre: 'Halo', console_id: xbox.body.id, statut: 'à jouer' })
+    })
+
+    requete('GET', '/api/consoles').then((reponse) => {
+      expect(reponse.body).to.have.length(1)
+      expect(reponse.body[0]).to.deep.include({ nom: 'Xbox', nb_jeux: 1 })
+    })
+  })
+})
+```
+
+- [ ] **Étape 21 : Lancer toute la suite Cypress**
+
+Arrêter tout serveur qui occuperait les ports 5173 ou 3001, supprimer d'éventuelles anciennes bases (`rm -f server/jeux.db server/jeux.test.db`), puis dans un terminal :
+```bash
+npm run dev:test
+```
+et dans un autre :
+```bash
+npm run cypress:lancer
+```
+Expected: trois fichiers, `api.cy.js` (14 tests), `bibliotheque.cy.js` (8 tests), `consoles.cy.js` (7 tests), tous réussis ; le récapitulatif se termine par `All specs passed!` (29 tests au total).
+
+- [ ] **Étape 22 : Vérifier que les tests attrapent la régression**
+
+Arrêter `dev:test`. Dans `server/index.js`, casser temporairement la protection de suppression en remplaçant `if (existante.nb_jeux > 0) {` par `if (false) {`. Relancer `npm run dev:test` puis `npx cypress run --spec cypress/e2e/consoles.cy.js,cypress/e2e/api.cy.js`.
+Expected: **échec** d'au moins 2 tests (« refuse de supprimer une console qui contient encore des jeux » côté Cypress ; « refuse de supprimer une console qui contient des jeux » côté API) ; en pratique la suppression échoue alors sur la clé étrangère et le serveur répond `500`, ce qui prouve aussi que la base protège les données.
+
+Puis annuler : `git checkout server/index.js`, relancer `npm run dev:test` et `npm run cypress:lancer`.
+Expected: `All specs passed!` (29 tests). Arrêter `dev:test` et nettoyer : `rm -f server/jeux.test.db`.
+
+- [ ] **Étape 23 : Commit des scénarios**
+
+```bash
+git add cypress
+git commit -m "Vidéo 7 : adapte les scénarios Cypress et teste les consoles"
+```
+
+- [ ] **Étape 24 : Mettre à jour le `README`**
+
+Dans `README.md` :
+- remplacer « série de 6 vidéos » par « série de 7 vidéos » ;
+- dans le tableau des vidéos, remplacer la ligne `| 6 | Tests Cypress | `06-cypress` (identique à `main`) |` par les deux lignes
+  `| 6 | Tests Cypress | `06-cypress` |` et `| 7 | Consoles et relations 1-N | `07-consoles` (identique à `main`) |` ;
+- ajouter, juste avant la section « Lancer les tests Cypress », cette section :
+
+````markdown
+## Passer d'une branche à une autre (à partir de la vidéo 5)
+
+La base de données est un fichier (`server/jeux.db`) qui n'est pas dans git. Quand le schéma change (par exemple entre `06-cypress` et `07-consoles`), **supprime ce fichier** avant de relancer l'application : SQLite ne modifie pas une table qui existe déjà, et l'ancien fichier ferait échouer le démarrage.
+
+```bash
+rm -f server/jeux.db
+npm run dev
+```
+````
+
+- [ ] **Étape 25 : Commit du `README`**
+
+```bash
+git add README.md
+git commit -m "Vidéo 7 : met à jour le README (7 vidéos, changement de schéma)"
+```
+
+- [ ] **Étape 26 : Commit de transition et branche**
+
+```bash
+git commit --allow-empty -m "Fin de la vidéo 7 : consoles et relations 1-N"
+git branch 07-consoles
+```
+Expected: `git log --oneline -1` affiche `Fin de la vidéo 7 : consoles et relations 1-N` ; `git rev-parse main 07-consoles` donne deux fois le même identifiant ; `06-cypress` n'a pas bougé.
+
+- [ ] **Étape 27 : Vérification finale**
+
+Run: `npm test && npm run build && npm run lint`
+Expected: tout passe (`Tests  12 passed (12)`).
+
+Run: `git log --oneline --grep='^Fin de la vidéo'`
+Expected: sept lignes, de `Fin de la vidéo 7 : consoles et relations 1-N` à `Fin de la vidéo 1 : mise en place`.
+
+Run: `git log --oneline --merges | wc -l` puis `git status --short | wc -l`
+Expected: `0` et `0`.
+
+Clone neuf :
+```bash
+rm -rf /tmp/verif-jeux-video
+git clone -q . /tmp/verif-jeux-video
+cd /tmp/verif-jeux-video
+npm ci
+npm test
+npm run build
+cd -
+rm -rf /tmp/verif-jeux-video
+```
+Expected: l'installation réussit, `Tests  12 passed (12)`, le build se termine sans erreur.
