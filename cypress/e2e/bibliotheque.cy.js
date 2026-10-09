@@ -1,10 +1,21 @@
-const ZELDA = { titre: 'Zelda', plateforme: 'Switch', statut: 'terminé', note: 5 }
-const HADES = { titre: 'Hades', plateforme: 'PC', statut: 'en cours', note: null }
-const POKEMON = { titre: 'Pokémon Épée', plateforme: 'Switch', statut: 'terminé', note: 3 }
+const ZELDA = { titre: 'Zelda', console: 'Switch', statut: 'terminé', note: 5 }
+const HADES = { titre: 'Hades', console: 'PC', statut: 'en cours', note: null }
+const POKEMON = { titre: 'Pokémon Épée', console: 'Switch', statut: 'terminé', note: 3 }
 
-// Crée les jeux directement via l'API (plus rapide que de passer par le formulaire), puis ouvre la page.
+// Crée les consoles Switch et PC, puis les jeux, directement via l'API
+// (plus rapide que de passer par les formulaires), puis ouvre la page.
 function visiterAvec(jeux) {
-  jeux.forEach((jeu) => cy.request('POST', '/api/jeux', jeu))
+  const ids = {}
+  ;['Switch', 'PC'].forEach((nom) => {
+    cy.request('POST', '/api/consoles', { nom }).then((reponse) => {
+      ids[nom] = reponse.body.id
+    })
+  })
+  cy.then(() => {
+    jeux.forEach(({ console: nomConsole, ...jeu }) => {
+      cy.request('POST', '/api/jeux', { ...jeu, console_id: ids[nomConsole] })
+    })
+  })
   cy.visit('/')
 }
 
@@ -24,15 +35,18 @@ describe('Bibliothèque de jeux vidéo', () => {
   })
 
   it('ajoute un jeu et le retrouve après rechargement', () => {
-    cy.visit('/')
+    visiterAvec([])
 
     cy.get('[data-cy="champ-titre"]').type("Assassin's Creed")
-    cy.get('[data-cy="champ-plateforme"]').select('PC')
+    cy.get('[data-cy="champ-console"]').select('PC')
     cy.get('[data-cy="champ-statut"]').select('en cours')
     cy.get('[data-cy="champ-note"]').select('4')
     cy.get('[data-cy="bouton-soumettre"]').click()
 
-    cy.get('[data-cy="carte-jeu"]').should('have.length', 1).and('contain', "Assassin's Creed")
+    cy.get('[data-cy="carte-jeu"]')
+      .should('have.length', 1)
+      .and('contain', "Assassin's Creed")
+      .and('contain', 'PC')
     cy.get('[data-cy="champ-titre"]').should('have.value', '')
 
     cy.reload()
@@ -77,10 +91,10 @@ describe('Bibliothèque de jeux vidéo', () => {
     cy.get('[data-cy="aucun-jeu"]').should('be.visible')
   })
 
-  it('filtre par plateforme et par statut', () => {
+  it('filtre par console et par statut', () => {
     visiterAvec([ZELDA, HADES, POKEMON])
 
-    cy.get('[data-cy="filtre-plateforme"]').select('Switch')
+    cy.get('[data-cy="filtre-console"]').select('Switch')
     cy.get('[data-cy="carte-jeu"]').should('have.length', 2)
     cy.get('[data-cy="compteur"]').should('have.text', '2 / 3 jeux')
 
@@ -88,13 +102,14 @@ describe('Bibliothèque de jeux vidéo', () => {
     cy.get('[data-cy="carte-jeu"]').should('not.exist')
     cy.get('[data-cy="aucun-jeu"]').should('be.visible')
 
-    cy.get('[data-cy="filtre-plateforme"]').select('Toutes les plateformes')
+    cy.get('[data-cy="filtre-console"]').select('Toutes les consoles')
     cy.get('[data-cy="carte-jeu"]').should('have.length', 1).and('contain', 'Hades')
   })
 
   it('refuse un titre vide ou fait d’espaces', () => {
-    cy.visit('/')
+    visiterAvec([])
 
+    cy.get('[data-cy="champ-console"]').select('PC')
     cy.get('[data-cy="bouton-soumettre"]').click()
     cy.get('[data-cy="carte-jeu"]').should('not.exist')
 
