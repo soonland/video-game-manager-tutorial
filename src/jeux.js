@@ -16,3 +16,25 @@ export function modifierJeu(jeux, id, modifications) {
 export function supprimerJeu(jeux, id) {
   return jeux.filter((jeu) => jeu.id !== id)
 }
+
+// Retire les accents et la casse pour comparer "Pokémon" et "pokemon".
+function normaliser(texte) {
+  return texte
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+}
+
+export function rechercherJeux(jeux, texte) {
+  const recherche = normaliser(texte.trim())
+  if (recherche === '') return jeux
+  return jeux.filter((jeu) => normaliser(jeu.titre).includes(recherche))
+}
+
+export function filtrerJeux(jeux, { plateforme = '', statut = '' } = {}) {
+  return jeux.filter(
+    (jeu) =>
+      (plateforme === '' || jeu.plateforme === plateforme) &&
+      (statut === '' || jeu.statut === statut),
+  )
+}
