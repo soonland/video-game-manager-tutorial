@@ -78,7 +78,15 @@ app.delete('/api/jeux/:id', (req, res) => {
   res.status(204).end()
 })
 
-semerSiVide(JEUX_INITIAUX)
+if (process.env.APP_ENV === 'test') {
+  // Route réservée aux tests : repart d'une base vide avant chaque scénario.
+  app.post('/api/test/reinitialiser', (req, res) => {
+    db.exec("DELETE FROM jeux; DELETE FROM sqlite_sequence WHERE name = 'jeux'")
+    res.status(204).end()
+  })
+} else {
+  semerSiVide(JEUX_INITIAUX)
+}
 
 app.listen(PORT, () => {
   console.log(`Serveur démarré sur http://localhost:${PORT}`)
