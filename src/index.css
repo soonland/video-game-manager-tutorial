@@ -107,3 +107,14 @@ button.danger {
 .carte-actions {
   margin-top: 8px;
 }
+
+.barre-filtres {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 8px;
+}
+
+.compteur {
+  color: var(--texte-doux);
+  font-size: 0.9rem;
+}
