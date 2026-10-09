@@ -1,7 +1,6 @@
 // Fonctions pures de la bibliothèque : elles ne modifient jamais la liste reçue,
 // elles renvoient toujours une nouvelle liste.
 
-export const PLATEFORMES = ['PC', 'PlayStation', 'Xbox', 'Switch']
 export const STATUTS = ['à jouer', 'en cours', 'terminé']
 
 // Retire les accents et la casse pour comparer "Pokémon" et "pokemon".

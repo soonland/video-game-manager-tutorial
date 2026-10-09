@@ -1,36 +1,57 @@
 import { useEffect, useState } from 'react'
+import { NavLink, Route, Routes } from 'react-router'
 import BarreFiltres from './components/BarreFiltres.jsx'
 import FormulaireJeu from './components/FormulaireJeu.jsx'
 import ListeJeux from './components/ListeJeux.jsx'
-import { chargerJeux, creerJeu, mettreAJourJeu, retirerJeu } from './api.js'
+import PageConsoles from './components/PageConsoles.jsx'
+import {
+  chargerConsoles,
+  chargerJeux,
+  creerConsole,
+  creerJeu,
+  mettreAJourConsole,
+  mettreAJourJeu,
+  retirerConsole,
+  retirerJeu,
+} from './api.js'
 import { filtrerJeux, rechercherJeux } from './jeux.js'
+
+function chargerTout() {
+  return Promise.all([chargerJeux(), chargerConsoles()])
+}
 
 function App() {
   const [jeux, setJeux] = useState([])
+  const [consoles, setConsoles] = useState([])
   const [erreur, setErreur] = useState(null)
   const [jeuEnEdition, setJeuEnEdition] = useState(null)
   const [recherche, setRecherche] = useState('')
-  const [filtres, setFiltres] = useState({ plateforme: '', statut: '' })
+  const [filtres, setFiltres] = useState({ consoleId: '', statut: '' })
 
   // La recherche et les filtres restent côté client : on filtre la liste complète reçue du serveur.
   const jeuxAffiches = filtrerJeux(rechercherJeux(jeux, recherche), filtres)
 
+  function appliquer([listeJeux, listeConsoles]) {
+    setJeux(listeJeux)
+    setConsoles(listeConsoles)
+    setErreur(null)
+  }
+
   async function recharger() {
     try {
-      setJeux(await chargerJeux())
-      setErreur(null)
+      appliquer(await chargerTout())
     } catch (e) {
       setErreur(e.message)
     }
   }
 
   useEffect(() => {
-    chargerJeux()
-      .then(setJeux)
+    chargerTout()
+      .then(appliquer)
       .catch((e) => setErreur(e.message))
   }, [])
 
-  // Exécute une action sur le serveur, puis recharge la liste.
+  // Exécute une action sur le serveur, puis recharge les jeux et les consoles.
   async function executer(action) {
     try {
       await action()
@@ -55,34 +76,76 @@ function App() {
     return executer(() => retirerJeu(id))
   }
 
+  function ajouterConsole(nom) {
+    return executer(() => creerConsole(nom))
+  }
+
+  function renommerConsole(id, nom) {
+    return executer(() => mettreAJourConsole(id, nom))
+  }
+
+  function supprimerConsole(id) {
+    return executer(() => retirerConsole(id))
+  }
+
   return (
     <main>
       <h1>Ma bibliothèque de jeux vidéo</h1>
+      <nav className="navigation">
+        <NavLink to="/" data-cy="lien-jeux" onClick={() => setErreur(null)}>
+          Jeux
+        </NavLink>
+        <NavLink to="/consoles" data-cy="lien-consoles" onClick={() => setErreur(null)}>
+          Consoles
+        </NavLink>
+      </nav>
       {erreur && (
         <p className="erreur" role="alert" data-cy="erreur">
           Une erreur est survenue : {erreur}
         </p>
       )}
-      {jeuEnEdition ? (
-        <FormulaireJeu
-          key={jeuEnEdition.id}
-          jeuInitial={jeuEnEdition}
-          onSoumettre={enregistrerModification}
-          onAnnuler={() => setJeuEnEdition(null)}
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <>
+              {jeuEnEdition ? (
+                <FormulaireJeu
+                  key={jeuEnEdition.id}
+                  jeuInitial={jeuEnEdition}
+                  consoles={consoles}
+                  onSoumettre={enregistrerModification}
+                  onAnnuler={() => setJeuEnEdition(null)}
+                />
+              ) : (
+                <FormulaireJeu key="nouveau" consoles={consoles} onSoumettre={ajouter} />
+              )}
+              <BarreFiltres
+                recherche={recherche}
+                onRecherche={setRecherche}
+                filtres={filtres}
+                onFiltres={setFiltres}
+                consoles={consoles}
+              />
+              <p className="compteur" data-cy="compteur">
+                {jeuxAffiches.length} / {jeux.length} jeux
+              </p>
+              <ListeJeux jeux={jeuxAffiches} onModifier={setJeuEnEdition} onSupprimer={supprimer} />
+            </>
+          }
         />
-      ) : (
-        <FormulaireJeu key="nouveau" onSoumettre={ajouter} />
-      )}
-      <BarreFiltres
-        recherche={recherche}
-        onRecherche={setRecherche}
-        filtres={filtres}
-        onFiltres={setFiltres}
-      />
-      <p className="compteur" data-cy="compteur">
-        {jeuxAffiches.length} / {jeux.length} jeux
-      </p>
-      <ListeJeux jeux={jeuxAffiches} onModifier={setJeuEnEdition} onSupprimer={supprimer} />
+        <Route
+          path="/consoles"
+          element={
+            <PageConsoles
+              consoles={consoles}
+              onAjouter={ajouterConsole}
+              onRenommer={renommerConsole}
+              onSupprimer={supprimerConsole}
+            />
+          }
+        />
+      </Routes>
     </main>
   )
 }

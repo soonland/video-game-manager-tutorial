@@ -3,7 +3,7 @@ function CarteJeu({ jeu, onModifier, onSupprimer }) {
     <li className="carte-jeu" data-cy="carte-jeu">
       <h2>{jeu.titre}</h2>
       <p>
-        {jeu.plateforme} · {jeu.statut}
+        {jeu.console} · {jeu.statut}
       </p>
       {jeu.note !== null && <p>Note : {jeu.note}/5</p>}
       <div className="carte-actions">

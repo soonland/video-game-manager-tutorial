@@ -34,3 +34,21 @@ export function mettreAJourJeu(id, donnees) {
 export function retirerJeu(id) {
   return demander(`${URL_JEUX}/${id}`, { method: 'DELETE' })
 }
+
+const URL_CONSOLES = '/api/consoles'
+
+export function chargerConsoles() {
+  return demander(URL_CONSOLES)
+}
+
+export function creerConsole(nom) {
+  return envoyer('POST', URL_CONSOLES, { nom })
+}
+
+export function mettreAJourConsole(id, nom) {
+  return envoyer('PUT', `${URL_CONSOLES}/${id}`, { nom })
+}
+
+export function retirerConsole(id) {
+  return demander(`${URL_CONSOLES}/${id}`, { method: 'DELETE' })
+}

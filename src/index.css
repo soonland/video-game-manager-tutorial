@@ -126,3 +126,66 @@ button.danger {
   color: #c92a2a;
   padding: 8px 12px;
 }
+
+.navigation {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.navigation a {
+  color: var(--accent);
+  text-decoration: none;
+  padding-bottom: 2px;
+}
+
+.navigation a.active {
+  font-weight: 600;
+  border-bottom: 2px solid var(--accent);
+}
+
+fieldset {
+  display: grid;
+  gap: 12px;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.consoles {
+  background: white;
+  border: 1px solid var(--bordure);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.consoles h2 {
+  margin: 0 0 12px;
+  font-size: 1.1rem;
+}
+
+.formulaire-console {
+  display: flex;
+  gap: 8px;
+}
+
+.formulaire-console input {
+  flex: 1;
+}
+
+.liste-consoles {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+  display: grid;
+  gap: 8px;
+}
+
+.liste-consoles li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}

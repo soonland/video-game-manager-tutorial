@@ -1,6 +1,6 @@
-import { PLATEFORMES, STATUTS } from '../jeux.js'
+import { STATUTS } from '../jeux.js'
 
-function BarreFiltres({ recherche, onRecherche, filtres, onFiltres }) {
+function BarreFiltres({ recherche, onRecherche, filtres, onFiltres, consoles }) {
   return (
     <div className="barre-filtres">
       <input
@@ -12,14 +12,21 @@ function BarreFiltres({ recherche, onRecherche, filtres, onFiltres }) {
         onChange={(evenement) => onRecherche(evenement.target.value)}
       />
       <select
-        data-cy="filtre-plateforme"
-        aria-label="Filtrer par plateforme"
-        value={filtres.plateforme}
-        onChange={(evenement) => onFiltres({ ...filtres, plateforme: evenement.target.value })}
+        data-cy="filtre-console"
+        aria-label="Filtrer par console"
+        value={filtres.consoleId}
+        onChange={(evenement) =>
+          onFiltres({
+            ...filtres,
+            consoleId: evenement.target.value === '' ? '' : Number(evenement.target.value),
+          })
+        }
       >
-        <option value="">Toutes les plateformes</option>
-        {PLATEFORMES.map((plateforme) => (
-          <option key={plateforme}>{plateforme}</option>
+        <option value="">Toutes les consoles</option>
+        {consoles.map((uneConsole) => (
+          <option key={uneConsole.id} value={uneConsole.id}>
+            {uneConsole.nom}
+          </option>
         ))}
       </select>
       <select
