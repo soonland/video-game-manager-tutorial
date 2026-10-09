@@ -23,6 +23,7 @@ La stack finale (React + Vite, Express, SQLite) est atteinte progressivement. Ch
 | Tests unitaires | Vitest | S'intègre à Vite sans configuration |
 | Tests E2E | Cypress | Demandé explicitement |
 | Style | CSS écrit à la main, sobre | L'apprentissage porte sur le code, pas sur le design |
+| Navigation (vidéo 7) | `react-router`, deux routes | Introduit le routage côté client pour la seconde page « Consoles » |
 | Organisation | Un seul `package.json` à la racine, pas de monorepo | Pas d'outillage de monorepo (workspaces, Turborepo) à expliquer |
 | Progression | Une branche git par fin de vidéo | Permet de « voyager » dans le tutoriel sans tout refaire |
 
@@ -113,7 +114,7 @@ Chaque vidéo se termine par la même consigne : **le lecteur fait un commit dan
   2. Semer les 4 consoles (PC, PlayStation, Xbox, Switch) ; les 30 jeux d'exemple pointent vers elles.
   3. Ajouter les routes `GET`, `POST`, `PUT` et `DELETE /api/consoles`.
   4. Adapter les routes `/api/jeux` : `console_id` remplace `plateforme`, et `GET /api/jeux` renvoie aussi le nom de la console (via un `JOIN`).
-  5. Ajouter dans l'interface une section « Consoles » sur la même page (sans routeur) : liste avec le nombre de jeux, ajout, renommage, suppression.
+  5. Installer `react-router` (dernière version) et déclarer deux routes : `/` (les jeux) et `/consoles` (une **seconde page**), avec une navigation entre les deux. La page « Consoles » liste les consoles avec leur nombre de jeux et permet l'ajout, le renommage et la suppression. L'état (jeux, consoles, recherche, filtres) reste dans `App` et est partagé entre les deux pages.
   6. Le formulaire d'un jeu propose les consoles de la base (désactivé avec un message s'il n'y en a aucune) ; le filtre par plateforme devient un filtre par console (`filtrerJeux` filtre sur `consoleId`, la constante `PLATEFORMES` disparaît).
   7. Mettre à jour les tests Vitest (`filtrerJeux`) et les scénarios Cypress, puis ajouter les nouveaux.
 - **Règles de la relation :**
@@ -121,14 +122,15 @@ Chaque vidéo se termine par la même consigne : **le lecteur fait un commit dan
   - Supprimer une console qui contient encore des jeux est **refusé** : `409` avec « Cette console contient encore des jeux. » ; id inconnu : `404`.
   - Un `console_id` inexistant dans `POST` ou `PUT /api/jeux` donne `400` avec « Console inconnue. ».
 - **Résultat :** on gère ses consoles, chaque jeu est rattaché à une console, et la base empêche les incohérences.
-- **Concepts :** clé étrangère, relation 1 à N, `JOIN`, contraintes d'intégrité, codes `409` et `400`.
+- **Concepts :** clé étrangère, relation 1 à N, `JOIN`, contraintes d'intégrité, codes `409` et `400`, routage côté client (deux pages, navigation).
 - **Pièges :**
   - `PRAGMA foreign_keys` désactivé par défaut.
   - `CREATE TABLE IF NOT EXISTS` ne modifie pas une table existante : le lecteur doit **supprimer `server/jeux.db`** pour repartir sur le nouveau schéma (une vraie migration est hors périmètre).
   - Ordre de suppression avec les clés étrangères (jeux avant consoles) dans la route de réinitialisation des tests.
+  - Un message d'erreur resté affiché après un changement de page : il est effacé au clic sur la navigation.
 - **Tests Cypress :**
   - Les scénarios existants sont adaptés : une console doit exister avant de créer un jeu.
-  - Nouveaux scénarios : ajouter, renommer et supprimer une console vide ; refus de supprimer une console qui contient des jeux ; doublon de nom refusé ; obligation de choisir une console pour un jeu.
+  - Nouveaux scénarios : ajouter, renommer et supprimer une console vide (sur la page `/consoles`) ; refus de supprimer une console qui contient des jeux ; doublon de nom refusé ; obligation de choisir une console pour un jeu ; navigation entre les deux pages, y compris l'ouverture directe de `/consoles`.
   - `api.cy.js` ajoute les cas `409`, `404` et `400` des consoles.
   - La route de réinitialisation vide aussi `consoles`.
 - **Conclusion de la série :** pistes pour la suite : TypeScript, authentification, API externe comme RAWG, relations N-N, séparation front/back en deux packages dans un vrai projet.

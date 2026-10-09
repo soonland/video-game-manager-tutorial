@@ -2396,9 +2396,9 @@ Le dépôt de référence existe déjà jusqu'à la vidéo 6 (`main` = `06-cypre
 
 **Fichiers :**
 - Modifier : `server/db.js`, `server/donnees.js`, `server/index.js`
-- Modifier : `src/api.js`, `src/jeux.js`, `src/recherche.test.js`, `src/App.jsx`, `src/index.css`
+- Modifier : `package.json`, `src/main.jsx`, `src/api.js`, `src/jeux.js`, `src/recherche.test.js`, `src/App.jsx`, `src/index.css`
 - Modifier : `src/components/CarteJeu.jsx`, `src/components/FormulaireJeu.jsx`, `src/components/BarreFiltres.jsx`
-- Créer : `src/components/SectionConsoles.jsx`
+- Créer : `src/components/PageConsoles.jsx` (la seconde page)
 - Modifier : `cypress/e2e/bibliotheque.cy.js`, `cypress/e2e/api.cy.js`
 - Créer : `cypress/e2e/consoles.cy.js`
 - Modifier : `README.md`, spec et plan (commit de documents)
@@ -2421,8 +2421,9 @@ Le dépôt de référence existe déjà jusqu'à la vidéo 6 (`main` = `06-cypre
   - `filtrerJeux(jeux, { consoleId = '', statut = '' } = {})` : `consoleId` est `''` (pas de filtre) ou un nombre comparé à `jeu.console_id`. `PLATEFORMES` disparaît de `src/jeux.js`.
   - `FormulaireJeu({ jeuInitial?, consoles, onSoumettre(donnees), onAnnuler? })` où `donnees` est `{ titre, console_id, statut, note }`.
   - `BarreFiltres({ recherche, onRecherche, filtres, onFiltres, consoles })` avec `filtres = { consoleId, statut }`.
-  - `SectionConsoles({ consoles, onAjouter(nom), onRenommer(id, nom), onSupprimer(id) })`.
-  - Attributs `data-cy` ajoutés : `champ-console`, `aucune-console`, `filtre-console` (remplace `filtre-plateforme`), `console`, `nouvelle-console-nom`, `ajouter-console`, `renommer-console`, `champ-renommer`, `valider-renommer`, `supprimer-console`.
+  - `PageConsoles({ consoles, onAjouter(nom), onRenommer(id, nom), onSupprimer(id) })` : contenu de la route `/consoles`.
+  - `App` installe deux routes avec `react-router` : `/` (formulaire, filtres, liste des jeux) et `/consoles` (`PageConsoles`), et une navigation (`NavLink`) entre les deux ; l'état reste dans `App`. `main.jsx` enveloppe `App` dans `BrowserRouter`.
+  - Attributs `data-cy` ajoutés : `champ-console`, `aucune-console`, `filtre-console` (remplace `filtre-plateforme`), `console`, `lien-jeux`, `lien-consoles`, `nouvelle-console-nom`, `ajouter-console`, `renommer-console`, `champ-renommer`, `valider-renommer`, `supprimer-console`.
 
 - [ ] **Étape 1 : Commit des documents**
 
@@ -2884,7 +2885,7 @@ git add server/index.js
 git commit -m "Vidéo 7 : ajoute les routes des consoles et adapte les routes des jeux"
 ```
 
-- [ ] **Étape 11 : Le client d'API**
+- [ ] **Étape 11 : Le client d'API et le routeur**
 
 Dans `src/api.js`, ajouter à la fin :
 ```js
@@ -2906,6 +2907,28 @@ export function mettreAJourConsole(id, nom) {
 export function retirerConsole(id) {
   return demander(`${URL_CONSOLES}/${id}`, { method: 'DELETE' })
 }
+```
+
+Installer le routeur (dernière version) :
+
+Run: `npm install react-router`
+Expected: `react-router` apparaît dans `dependencies`.
+
+`src/main.jsx` (remplacer tout le fichier) :
+```jsx
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import { BrowserRouter } from 'react-router'
+import './index.css'
+import App from './App.jsx'
+
+createRoot(document.getElementById('root')).render(
+  <StrictMode>
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  </StrictMode>,
+)
 ```
 
 - [ ] **Étape 12 : Les composants qui affichent ou choisissent une console**
@@ -3103,13 +3126,13 @@ function BarreFiltres({ recherche, onRecherche, filtres, onFiltres, consoles }) 
 export default BarreFiltres
 ```
 
-- [ ] **Étape 13 : La section « Consoles »**
+- [ ] **Étape 13 : La page « Consoles »**
 
-`src/components/SectionConsoles.jsx` (nouveau fichier) :
+`src/components/PageConsoles.jsx` (nouveau fichier) :
 ```jsx
 import { useState } from 'react'
 
-function SectionConsoles({ consoles, onAjouter, onRenommer, onSupprimer }) {
+function PageConsoles({ consoles, onAjouter, onRenommer, onSupprimer }) {
   const [nouveauNom, setNouveauNom] = useState('')
   const [edition, setEdition] = useState(null)
 
@@ -3196,7 +3219,7 @@ function SectionConsoles({ consoles, onAjouter, onRenommer, onSupprimer }) {
   )
 }
 
-export default SectionConsoles
+export default PageConsoles
 ```
 
 - [ ] **Étape 14 : `App` charge et gère les consoles**
@@ -3204,10 +3227,11 @@ export default SectionConsoles
 `src/App.jsx` (remplacer tout le fichier) :
 ```jsx
 import { useEffect, useState } from 'react'
+import { NavLink, Route, Routes } from 'react-router'
 import BarreFiltres from './components/BarreFiltres.jsx'
 import FormulaireJeu from './components/FormulaireJeu.jsx'
 import ListeJeux from './components/ListeJeux.jsx'
-import SectionConsoles from './components/SectionConsoles.jsx'
+import PageConsoles from './components/PageConsoles.jsx'
 import {
   chargerConsoles,
   chargerJeux,
@@ -3295,39 +3319,61 @@ function App() {
   return (
     <main>
       <h1>Ma bibliothèque de jeux vidéo</h1>
+      <nav className="navigation">
+        <NavLink to="/" data-cy="lien-jeux" onClick={() => setErreur(null)}>
+          Jeux
+        </NavLink>
+        <NavLink to="/consoles" data-cy="lien-consoles" onClick={() => setErreur(null)}>
+          Consoles
+        </NavLink>
+      </nav>
       {erreur && (
         <p className="erreur" role="alert" data-cy="erreur">
           Une erreur est survenue : {erreur}
         </p>
       )}
-      <SectionConsoles
-        consoles={consoles}
-        onAjouter={ajouterConsole}
-        onRenommer={renommerConsole}
-        onSupprimer={supprimerConsole}
-      />
-      {jeuEnEdition ? (
-        <FormulaireJeu
-          key={jeuEnEdition.id}
-          jeuInitial={jeuEnEdition}
-          consoles={consoles}
-          onSoumettre={enregistrerModification}
-          onAnnuler={() => setJeuEnEdition(null)}
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <>
+              {jeuEnEdition ? (
+                <FormulaireJeu
+                  key={jeuEnEdition.id}
+                  jeuInitial={jeuEnEdition}
+                  consoles={consoles}
+                  onSoumettre={enregistrerModification}
+                  onAnnuler={() => setJeuEnEdition(null)}
+                />
+              ) : (
+                <FormulaireJeu key="nouveau" consoles={consoles} onSoumettre={ajouter} />
+              )}
+              <BarreFiltres
+                recherche={recherche}
+                onRecherche={setRecherche}
+                filtres={filtres}
+                onFiltres={setFiltres}
+                consoles={consoles}
+              />
+              <p className="compteur" data-cy="compteur">
+                {jeuxAffiches.length} / {jeux.length} jeux
+              </p>
+              <ListeJeux jeux={jeuxAffiches} onModifier={setJeuEnEdition} onSupprimer={supprimer} />
+            </>
+          }
         />
-      ) : (
-        <FormulaireJeu key="nouveau" consoles={consoles} onSoumettre={ajouter} />
-      )}
-      <BarreFiltres
-        recherche={recherche}
-        onRecherche={setRecherche}
-        filtres={filtres}
-        onFiltres={setFiltres}
-        consoles={consoles}
-      />
-      <p className="compteur" data-cy="compteur">
-        {jeuxAffiches.length} / {jeux.length} jeux
-      </p>
-      <ListeJeux jeux={jeuxAffiches} onModifier={setJeuEnEdition} onSupprimer={supprimer} />
+        <Route
+          path="/consoles"
+          element={
+            <PageConsoles
+              consoles={consoles}
+              onAjouter={ajouterConsole}
+              onRenommer={renommerConsole}
+              onSupprimer={supprimerConsole}
+            />
+          }
+        />
+      </Routes>
     </main>
   )
 }
@@ -3344,6 +3390,23 @@ export const PLATEFORMES = ['PC', 'PlayStation', 'Xbox', 'Switch']
 
 Ajouter à la fin de `src/index.css` :
 ```css
+
+.navigation {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.navigation a {
+  color: var(--accent);
+  text-decoration: none;
+  padding-bottom: 2px;
+}
+
+.navigation a.active {
+  font-weight: 600;
+  border-bottom: 2px solid var(--accent);
+}
 
 fieldset {
   display: grid;
@@ -3406,8 +3469,8 @@ Expected: aucune erreur. Si une règle du modèle signale ce code, appliquer le 
 - [ ] **Étape 17 : Commit du front**
 
 ```bash
-git add src
-git commit -m "Vidéo 7 : gère les consoles dans l'interface et choisit la console d'un jeu"
+git add package.json package-lock.json src
+git commit -m "Vidéo 7 : ajoute la page Consoles (react-router) et le choix de la console d'un jeu"
 ```
 
 - [ ] **Étape 18 : Adapter les scénarios Cypress existants**
@@ -3544,13 +3607,33 @@ describe('Bibliothèque de jeux vidéo', () => {
 })
 ```
 
-- [ ] **Étape 19 : Les scénarios des consoles**
+- [ ] **Étape 19 : Les scénarios des consoles et de la navigation**
 
 `cypress/e2e/consoles.cy.js` (nouveau fichier) :
 ```js
 describe('Consoles', () => {
   beforeEach(() => {
     cy.request('POST', '/api/test/reinitialiser')
+  })
+
+  it('navigue entre les deux pages, y compris par une adresse directe', () => {
+    cy.visit('/')
+    cy.get('[data-cy="consoles"]').should('not.exist')
+    cy.get('[data-cy="lien-jeux"]').should('have.class', 'active')
+
+    cy.get('[data-cy="lien-consoles"]').click()
+    cy.location('pathname').should('eq', '/consoles')
+    cy.get('[data-cy="consoles"]').should('be.visible')
+    cy.get('[data-cy="champ-titre"]').should('not.exist')
+    cy.get('[data-cy="lien-consoles"]').should('have.class', 'active')
+    cy.get('[data-cy="lien-jeux"]').should('not.have.class', 'active')
+
+    cy.get('[data-cy="lien-jeux"]').click()
+    cy.location('pathname').should('eq', '/')
+    cy.get('[data-cy="champ-titre"]').should('exist')
+
+    cy.visit('/consoles')
+    cy.get('[data-cy="consoles"]').should('be.visible')
   })
 
   it('désactive le formulaire des jeux tant qu’aucune console n’existe', () => {
@@ -3560,14 +3643,16 @@ describe('Consoles', () => {
     cy.get('[data-cy="champ-titre"]').should('be.disabled')
   })
 
-  it('ajoute une console', () => {
-    cy.visit('/')
+  it('ajoute une console puis la propose dans le formulaire des jeux', () => {
+    cy.visit('/consoles')
 
     cy.get('[data-cy="nouvelle-console-nom"]').type('Steam Deck')
     cy.get('[data-cy="ajouter-console"]').click()
 
     cy.get('[data-cy="console"]').should('have.length', 1).and('contain', 'Steam Deck')
     cy.get('[data-cy="console"]').should('contain', '0 jeu')
+
+    cy.get('[data-cy="lien-jeux"]').click()
     cy.get('[data-cy="aucune-console"]').should('not.exist')
     cy.get('[data-cy="champ-console"]').select('Steam Deck')
   })
@@ -3584,17 +3669,19 @@ describe('Consoles', () => {
     cy.visit('/')
     cy.get('[data-cy="carte-jeu"]').should('contain', 'Switch')
 
+    cy.get('[data-cy="lien-consoles"]').click()
     cy.get('[data-cy="renommer-console"]').click()
     cy.get('[data-cy="champ-renommer"]').clear().type('Nintendo Switch')
     cy.get('[data-cy="valider-renommer"]').click()
-
     cy.get('[data-cy="console"]').should('contain', 'Nintendo Switch').and('contain', '1 jeu')
+
+    cy.get('[data-cy="lien-jeux"]').click()
     cy.get('[data-cy="carte-jeu"]').should('contain', 'Nintendo Switch')
   })
 
   it('supprime une console vide', () => {
     cy.request('POST', '/api/consoles', { nom: 'Dreamcast' })
-    cy.visit('/')
+    cy.visit('/consoles')
     cy.get('[data-cy="console"]').should('have.length', 1)
 
     cy.get('[data-cy="supprimer-console"]').click()
@@ -3612,18 +3699,21 @@ describe('Consoles', () => {
         note: null,
       })
     })
-    cy.visit('/')
+    cy.visit('/consoles')
 
     cy.get('[data-cy="supprimer-console"]').click()
 
     cy.get('[data-cy="erreur"]').should('contain', 'Cette console contient encore des jeux.')
     cy.get('[data-cy="console"]').should('have.length', 1).and('contain', 'Xbox')
+
+    cy.get('[data-cy="lien-jeux"]').click()
+    cy.get('[data-cy="erreur"]').should('not.exist')
     cy.get('[data-cy="carte-jeu"]').should('have.length', 1)
   })
 
   it('refuse un nom de console déjà utilisé, sans tenir compte de la casse', () => {
     cy.request('POST', '/api/consoles', { nom: 'PC' })
-    cy.visit('/')
+    cy.visit('/consoles')
 
     cy.get('[data-cy="nouvelle-console-nom"]').type('pc')
     cy.get('[data-cy="ajouter-console"]').click()
@@ -3790,7 +3880,7 @@ et dans un autre :
 ```bash
 npm run cypress:lancer
 ```
-Expected: trois fichiers, `api.cy.js` (14 tests), `bibliotheque.cy.js` (8 tests), `consoles.cy.js` (7 tests), tous réussis ; le récapitulatif se termine par `All specs passed!` (29 tests au total).
+Expected: trois fichiers, `api.cy.js` (14 tests), `bibliotheque.cy.js` (8 tests), `consoles.cy.js` (8 tests), tous réussis ; le récapitulatif se termine par `All specs passed!` (30 tests au total).
 
 - [ ] **Étape 22 : Vérifier que les tests attrapent la régression**
 
@@ -3798,7 +3888,7 @@ Arrêter `dev:test`. Dans `server/index.js`, casser temporairement la protection
 Expected: **échec** d'au moins 2 tests (« refuse de supprimer une console qui contient encore des jeux » côté Cypress ; « refuse de supprimer une console qui contient des jeux » côté API) ; en pratique la suppression échoue alors sur la clé étrangère et le serveur répond `500`, ce qui prouve aussi que la base protège les données.
 
 Puis annuler : `git checkout server/index.js`, relancer `npm run dev:test` et `npm run cypress:lancer`.
-Expected: `All specs passed!` (29 tests). Arrêter `dev:test` et nettoyer : `rm -f server/jeux.test.db`.
+Expected: `All specs passed!` (30 tests). Arrêter `dev:test` et nettoyer : `rm -f server/jeux.test.db`.
 
 - [ ] **Étape 23 : Commit des scénarios**
 
