@@ -46,3 +46,64 @@ h1 {
   margin: 2px 0;
   color: var(--texte-doux);
 }
+
+.formulaire {
+  background: white;
+  border: 1px solid var(--bordure);
+  border-radius: 8px;
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.formulaire h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.formulaire label {
+  display: grid;
+  gap: 4px;
+  font-size: 0.9rem;
+}
+
+input,
+select {
+  padding: 8px;
+  border: 1px solid var(--bordure);
+  border-radius: 6px;
+  font: inherit;
+  background: white;
+}
+
+button {
+  padding: 8px 14px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--accent);
+  color: white;
+  font: inherit;
+  cursor: pointer;
+}
+
+button.secondaire {
+  background: white;
+  color: var(--accent);
+}
+
+button.danger {
+  background: white;
+  color: #c92a2a;
+  border-color: #c92a2a;
+}
+
+.actions,
+.carte-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.carte-actions {
+  margin-top: 8px;
+}
