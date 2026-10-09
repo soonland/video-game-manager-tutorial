@@ -118,3 +118,11 @@ button.danger {
   color: var(--texte-doux);
   font-size: 0.9rem;
 }
+
+.erreur {
+  background: #fff5f5;
+  border: 1px solid #c92a2a;
+  border-radius: 6px;
+  color: #c92a2a;
+  padding: 8px 12px;
+}

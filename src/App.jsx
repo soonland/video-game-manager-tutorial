@@ -1,36 +1,68 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import BarreFiltres from './components/BarreFiltres.jsx'
 import FormulaireJeu from './components/FormulaireJeu.jsx'
 import ListeJeux from './components/ListeJeux.jsx'
-import { JEUX_INITIAUX } from './donnees.js'
-import { ajouterJeu, filtrerJeux, modifierJeu, rechercherJeux, supprimerJeu } from './jeux.js'
+import { chargerJeux, creerJeu, mettreAJourJeu, retirerJeu } from './api.js'
+import { filtrerJeux, rechercherJeux } from './jeux.js'
 
 function App() {
-  const [jeux, setJeux] = useState(JEUX_INITIAUX)
+  const [jeux, setJeux] = useState([])
+  const [erreur, setErreur] = useState(null)
   const [jeuEnEdition, setJeuEnEdition] = useState(null)
   const [recherche, setRecherche] = useState('')
   const [filtres, setFiltres] = useState({ plateforme: '', statut: '' })
 
-  // La liste affichée est calculée à partir de la liste complète : on ne la stocke pas.
+  // La recherche et les filtres restent côté client : on filtre la liste complète reçue du serveur.
   const jeuxAffiches = filtrerJeux(rechercherJeux(jeux, recherche), filtres)
 
+  async function recharger() {
+    try {
+      setJeux(await chargerJeux())
+      setErreur(null)
+    } catch (e) {
+      setErreur(e.message)
+    }
+  }
+
+  useEffect(() => {
+    chargerJeux()
+      .then(setJeux)
+      .catch((e) => setErreur(e.message))
+  }, [])
+
+  // Exécute une action sur le serveur, puis recharge la liste.
+  async function executer(action) {
+    try {
+      await action()
+      await recharger()
+    } catch (e) {
+      setErreur(e.message)
+    }
+  }
+
   function ajouter(donnees) {
-    setJeux(ajouterJeu(jeux, donnees))
+    return executer(() => creerJeu(donnees))
   }
 
   function enregistrerModification(donnees) {
-    setJeux(modifierJeu(jeux, jeuEnEdition.id, donnees))
+    const id = jeuEnEdition.id
     setJeuEnEdition(null)
+    return executer(() => mettreAJourJeu(id, donnees))
   }
 
   function supprimer(id) {
-    setJeux(supprimerJeu(jeux, id))
     if (jeuEnEdition?.id === id) setJeuEnEdition(null)
+    return executer(() => retirerJeu(id))
   }
 
   return (
     <main>
       <h1>Ma bibliothèque de jeux vidéo</h1>
+      {erreur && (
+        <p className="erreur" role="alert">
+          Une erreur est survenue : {erreur}
+        </p>
+      )}
       {jeuEnEdition ? (
         <FormulaireJeu
           key={jeuEnEdition.id}
