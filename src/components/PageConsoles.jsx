@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { CARTE, CHAMP } from '../classes.js'
+import Bouton from './Bouton.jsx'
 
 function PageConsoles({ consoles, onAjouter, onRenommer, onSupprimer }) {
   const [nouveauNom, setNouveauNom] = useState('')
@@ -23,60 +25,60 @@ function PageConsoles({ consoles, onAjouter, onRenommer, onSupprimer }) {
   }
 
   return (
-    <section className="consoles" data-cy="consoles">
-      <h2>Consoles</h2>
-      <form className="formulaire-console" onSubmit={ajouter}>
+    <section className={CARTE} data-cy="consoles">
+      <h2 className="mb-3 text-lg font-semibold">Consoles</h2>
+      <form className="flex gap-2" onSubmit={ajouter}>
         <input
+          className={`${CHAMP} flex-1`}
           data-cy="nouvelle-console-nom"
           aria-label="Nom de la nouvelle console"
           placeholder="Nouvelle console"
           value={nouveauNom}
           onChange={(evenement) => setNouveauNom(evenement.target.value)}
         />
-        <button type="submit" data-cy="ajouter-console">
+        <Bouton type="submit" data-cy="ajouter-console">
           Ajouter
-        </button>
+        </Bouton>
       </form>
-      <ul className="liste-consoles">
+      <ul className="mt-4 grid gap-2">
         {consoles.map((uneConsole) => (
-          <li key={uneConsole.id} data-cy="console">
+          <li key={uneConsole.id} className="flex items-center justify-between gap-2" data-cy="console">
             {edition?.id === uneConsole.id ? (
-              <form className="formulaire-console" onSubmit={renommer}>
+              <form className="flex flex-1 gap-2" onSubmit={renommer}>
                 <input
+                  className={`${CHAMP} flex-1`}
                   data-cy="champ-renommer"
                   aria-label={`Nouveau nom de ${uneConsole.nom}`}
                   value={edition.nom}
                   onChange={(evenement) => setEdition({ ...edition, nom: evenement.target.value })}
                 />
-                <button type="submit" data-cy="valider-renommer">
+                <Bouton type="submit" data-cy="valider-renommer">
                   Enregistrer
-                </button>
-                <button type="button" className="secondaire" onClick={() => setEdition(null)}>
+                </Bouton>
+                <Bouton variante="secondaire" onClick={() => setEdition(null)}>
                   Annuler
-                </button>
+                </Bouton>
               </form>
             ) : (
               <>
                 <span>
                   {uneConsole.nom} · {uneConsole.nb_jeux} {uneConsole.nb_jeux > 1 ? 'jeux' : 'jeu'}
                 </span>
-                <span className="carte-actions">
-                  <button
-                    type="button"
-                    className="secondaire"
+                <span className="flex gap-2">
+                  <Bouton
+                    variante="secondaire"
                     data-cy="renommer-console"
                     onClick={() => setEdition({ id: uneConsole.id, nom: uneConsole.nom })}
                   >
                     Renommer
-                  </button>
-                  <button
-                    type="button"
-                    className="danger"
+                  </Bouton>
+                  <Bouton
+                    variante="danger"
                     data-cy="supprimer-console"
                     onClick={() => onSupprimer(uneConsole.id)}
                   >
                     Supprimer
-                  </button>
+                  </Bouton>
                 </span>
               </>
             )}

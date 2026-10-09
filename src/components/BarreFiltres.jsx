@@ -1,9 +1,11 @@
+import { CHAMP } from '../classes.js'
 import { STATUTS } from '../jeux.js'
 
 function BarreFiltres({ recherche, onRecherche, filtres, onFiltres, consoles }) {
   return (
-    <div className="barre-filtres">
+    <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
       <input
+        className={CHAMP}
         type="search"
         data-cy="recherche"
         placeholder="Rechercher un titre…"
@@ -12,6 +14,7 @@ function BarreFiltres({ recherche, onRecherche, filtres, onFiltres, consoles }) 
         onChange={(evenement) => onRecherche(evenement.target.value)}
       />
       <select
+        className={CHAMP}
         data-cy="filtre-console"
         aria-label="Filtrer par console"
         value={filtres.consoleId}
@@ -30,6 +33,7 @@ function BarreFiltres({ recherche, onRecherche, filtres, onFiltres, consoles }) 
         ))}
       </select>
       <select
+        className={CHAMP}
         data-cy="filtre-statut"
         aria-label="Filtrer par statut"
         value={filtres.statut}

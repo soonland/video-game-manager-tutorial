@@ -16,6 +16,10 @@ import {
 } from './api.js'
 import { filtrerJeux, rechercherJeux } from './jeux.js'
 
+// Le lien actif est stylé grâce à l'attribut aria-current que react-router ajoute lui-même.
+const LIEN =
+  '-mb-px border-b-2 border-transparent px-1 pb-2 text-slate-400 hover:text-slate-100 aria-[current=page]:border-violet-500 aria-[current=page]:font-semibold aria-[current=page]:text-slate-100'
+
 function chargerTout() {
   return Promise.all([chargerJeux(), chargerConsoles()])
 }
@@ -89,18 +93,27 @@ function App() {
   }
 
   return (
-    <main>
-      <h1>Ma bibliothèque de jeux vidéo</h1>
-      <nav className="navigation">
-        <NavLink to="/" data-cy="lien-jeux" onClick={() => setErreur(null)}>
+    <main className="mx-auto max-w-3xl px-4 py-6">
+      <h1 className="mb-4 text-3xl font-bold tracking-tight">Ma bibliothèque de jeux vidéo</h1>
+      <nav className="mb-6 flex gap-4 border-b border-slate-800">
+        <NavLink to="/" className={LIEN} data-cy="lien-jeux" onClick={() => setErreur(null)}>
           Jeux
         </NavLink>
-        <NavLink to="/consoles" data-cy="lien-consoles" onClick={() => setErreur(null)}>
+        <NavLink
+          to="/consoles"
+          className={LIEN}
+          data-cy="lien-consoles"
+          onClick={() => setErreur(null)}
+        >
           Consoles
         </NavLink>
       </nav>
       {erreur && (
-        <p className="erreur" role="alert" data-cy="erreur">
+        <p
+          className="mb-4 rounded-md border border-rose-500 bg-rose-500/10 px-3 py-2 text-rose-300"
+          role="alert"
+          data-cy="erreur"
+        >
           Une erreur est survenue : {erreur}
         </p>
       )}
@@ -127,7 +140,7 @@ function App() {
                 onFiltres={setFiltres}
                 consoles={consoles}
               />
-              <p className="compteur" data-cy="compteur">
+              <p className="my-3 text-sm text-slate-400" data-cy="compteur">
                 {jeuxAffiches.length} / {jeux.length} jeux
               </p>
               <ListeJeux jeux={jeuxAffiches} onModifier={setJeuEnEdition} onSupprimer={supprimer} />
