@@ -1,6 +1,6 @@
 # Bibliothèque de jeux vidéo : dépôt de référence
 
-Ce dépôt accompagne la série de 6 vidéos « Créer une application de gestion de bibliothèque de jeux vidéo » (React + Vite, Express, SQLite, Vitest, Cypress).
+Ce dépôt accompagne la série de 7 vidéos « Créer une application de gestion de bibliothèque de jeux vidéo » (React + Vite, Express, SQLite, Vitest, Cypress).
 
 Il n'est **pas** fait pour être cloné puis lu : tu apprends davantage en construisant **ton propre projet** en suivant les vidéos. Ce dépôt sert à comparer ton travail et à reprendre si tu es bloqué.
 
@@ -39,7 +39,8 @@ L'historique de `main` est linéaire. Chaque branche pointe vers le commit `Fin 
 | 3 | Recherche et filtres | `03-recherche-filtres` |
 | 4 | Tests unitaires (Vitest) | `04-tests-unitaires` |
 | 5 | API et SQLite | `05-api-sqlite` |
-| 6 | Tests Cypress | `06-cypress` (identique à `main`) |
+| 6 | Tests Cypress | `06-cypress` |
+| 7 | Consoles et relations 1-N | `07-consoles` (identique à `main`) |
 
 ## Commandes
 
@@ -57,6 +58,15 @@ L'historique de `main` est linéaire. Chaque branche pointe vers le commit `Fin 
 ## Si `npm install` échoue (à partir de la vidéo 5)
 
 `better-sqlite3` est un module natif. Dans la plupart des cas un binaire précompilé est téléchargé. Sinon, installe les outils de compilation de ton système (Xcode Command Line Tools sur macOS, `build-essential` sur Linux, « Desktop development with C++ » sur Windows) puis relance `npm install`.
+
+## Passer d'une branche à une autre (à partir de la vidéo 5)
+
+La base de données est un fichier (`server/jeux.db`) qui n'est pas dans git. Quand le schéma change (par exemple entre `06-cypress` et `07-consoles`), **supprime ce fichier** avant de relancer l'application : SQLite ne modifie pas une table qui existe déjà, et l'ancien fichier ferait échouer le démarrage.
+
+```bash
+rm -f server/jeux.db
+npm run dev
+```
 
 ## Lancer les tests Cypress
 
